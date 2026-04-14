@@ -1,0 +1,10 @@
+services:
+  legaltech-scraper:
+    build: .
+    container_name: legaltech-scraper
+    ports:
+      - "5050:5050"
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DOCKER_ENV=1

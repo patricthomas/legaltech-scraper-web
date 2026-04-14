@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LegalTech News Scraper</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", system-ui, sans-serif; background: #f1f5f9; color: #1e293b; min-height: 100vh; }
+    .header { background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%); color: white; padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 12px rgba(0,0,0,0.2); }
+    .header-left h1 { font-size: 1.6rem; font-weight: 700; }
+    .header-left p  { font-size: 0.8rem; opacity: 0.75; margin-top: 2px; letter-spacing: 1.5px; text-transform: uppercase; }
+    .badge { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35); border-radius: 20px; padding: 4px 12px; font-size: 0.72rem; font-weight: 600; }
+    .main { max-width: 960px; margin: 28px auto; padding: 0 20px; }
+    .card { background: white; border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+    .card-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 14px; }
+    .seg-group { display: flex; gap: 8px; }
+    .seg-btn { flex: 1; padding: 10px 0; border: 2px solid #e2e8f0; border-radius: 8px; background: white; font-size: 0.9rem; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.15s; }
+    .seg-btn.active-strategic { border-color: #1d4ed8; background: #eff6ff; color: #1d4ed8; }
+    .seg-btn.active-sml       { border-color: #7c3aed; background: #f5f3ff; color: #7c3aed; }
+    .seg-btn.active-intl      { border-color: #0369a1; background: #f0f9ff; color: #0369a1; }
+    .comp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+    .comp-label { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 0.87rem; transition: all 0.15s; }
+    .comp-label:hover { border-color: #fca5a5; background: #fff5f5; }
+    .comp-label input[type=checkbox] { accent-color: #ef4444; width: 15px; height: 15px; }
+    .comp-label.checked { border-color: #ef4444; background: #fff5f5; }
+    .field-row { display: flex; gap: 16px; }
+    .field-group { flex: 1; }
+    .field-group label { display: block; font-size: 0.78rem; font-weight: 600; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .field-group input { width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; outline: none; transition: border 0.15s; }
+    .field-group input:focus { border-color: #1d4ed8; box-shadow: 0 0 0 3px rgba(29,78,216,0.1); }
+    .field-group small { display: block; margin-top: 4px; font-size: 0.75rem; color: #94a3b8; }
+    #run-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; color: white; cursor: pointer; transition: all 0.15s; }
+    #run-btn.strategic { background: linear-gradient(135deg, #1d4ed8, #3b82f6); }
+    #run-btn.sml       { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
+    #run-btn.intl      { background: linear-gradient(135deg, #0369a1, #0ea5e9); }
+    #run-btn:hover { opacity: 0.92; transform: translateY(-1px); }
+    #run-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+    .progress-wrap { height: 4px; background: #e2e8f0; border-radius: 2px; margin-top: 12px; overflow: hidden; display: none; }
+    .progress-bar  { height: 100%; width: 30%; background: #3b82f6; border-radius: 2px; animation: slide 1.4s ease-in-out infinite; }
+    @keyframes slide { 0%{margin-left:-30%} 100%{margin-left:100%} }
+    #log-panel { background: #0f172a; border-radius: 10px; padding: 14px 16px; font-family: Consolas, monospace; font-size: 0.8rem; color: #4ade80; max-height: 200px; overflow-y: auto; display: none; margin-top: 12px; line-height: 1.7; }
+    #log-panel .err { color: #f87171; }
+    #result-section { display: none; }
+    #download-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; color: white; background: linear-gradient(135deg, #059669, #10b981); cursor: pointer; transition: all 0.15s; margin-bottom: 16px; }
+    #download-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .preview-frame-wrap { border: 1.5px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+    .preview-label { padding: 8px 14px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+    #preview-frame { width: 100%; height: 520px; border: none; }
+  </style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <h1>LegalTech News Scraper</h1>
+    <p>NetDocuments &middot; Market Intelligence</p>
+  </div>
+  <span class="badge">v2 WEB</span>
+</div>
+<div class="main">
+
+  <div class="card">
+    <div class="card-title">Segment</div>
+    <div class="seg-group">
+      <button class="seg-btn active-strategic" data-seg="Strategic" onclick="setSeg(this)">Strategic</button>
+      <button class="seg-btn" data-seg="SML" onclick="setSeg(this)">SML</button>
+      <button class="seg-btn" data-seg="International" onclick="setSeg(this)">International</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Competitor Watch</div>
+    <div class="comp-grid">
+      {% for name in competitors %}
+      <label class="comp-label checked">
+        <input type="checkbox" value="{{ name }}" checked onchange="toggleCompLabel(this)"/>
+        {{ name }}
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="field-row">
+      <div class="field-group">
+        <label>Email Recipient</label>
+        <input id="email-field" type="email" value="{{ default_email }}" placeholder="someone@netdocuments.com"/>
+        <small>Overrides the default To: address</small>
+      </div>
+      <div class="field-group">
+        <label>Investigate Term</label>
+        <input id="investigate-field" type="text" placeholder="e.g. contract lifecycle management"/>
+        <small>Ranks same as netdocuments (+30 pts)</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <button id="run-btn" class="strategic" onclick="runScraper()">&#9654; Run Scraper</button>
+    <div class="progress-wrap" id="progress-wrap"><div class="progress-bar"></div></div>
+    <div id="log-panel"></div>
+  </div>
+
+  <div id="result-section">
+    <div class="card">
+      <button id="download-btn" onclick="downloadEml()">&#11015; Download Email Draft (.eml)</button>
+      <div class="preview-frame-wrap">
+        <div class="preview-label">Email Preview</div>
+        <iframe id="preview-frame"></iframe>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+  let currentSeg = "Strategic";
+
+  window.addEventListener("load", () => {
+    try {
+      const cfg = JSON.parse(localStorage.getItem("nd_scraper_settings") || "{}");
+      if (cfg.segment) setSeg(document.querySelector('[data-seg="' + cfg.segment + '"]'));
+      if (cfg.email) document.getElementById("email-field").value = cfg.email;
+      if (cfg.investigate) document.getElementById("investigate-field").value = cfg.investigate;
+      if (cfg.competitors) {
+        document.querySelectorAll(".comp-grid input[type=checkbox]").forEach(cb => {
+          cb.checked = cfg.competitors.includes(cb.value);
+          cb.closest("label").classList.toggle("checked", cb.checked);
+        });
+      }
+    } catch(e) {}
+  });
+
+  function saveSettings() {
+    const competitors = [...document.querySelectorAll(".comp-grid input:checked")].map(c => c.value);
+    localStorage.setItem("nd_scraper_settings", JSON.stringify({
+      segment: currentSeg,
+      email: document.getElementById("email-field").value,
+      investigate: document.getElementById("investigate-field").value,
+      competitors
+    }));
+  }
+
+  function setSeg(btn) {
+    if (!btn) return;
+    document.querySelectorAll(".seg-btn").forEach(b => b.className = "seg-btn");
+    const mapCls = { Strategic: "active-strategic", SML: "active-sml", International: "active-intl" };
+    const btnCls = { Strategic: "strategic", SML: "sml", International: "intl" };
+    btn.classList.add(mapCls[btn.dataset.seg]);
+    currentSeg = btn.dataset.seg;
+    document.getElementById("run-btn").className = btnCls[currentSeg];
+  }
+
+  function toggleCompLabel(cb) {
+    cb.closest("label").classList.toggle("checked", cb.checked);
+  }
+
+  async function runScraper() {
+    saveSettings();
+    document.getElementById("result-section").style.display = "none";
+    const log = document.getElementById("log-panel");
+    const prog = document.getElementById("progress-wrap");
+    const btn = document.getElementById("run-btn");
+    log.innerHTML = ""; log.style.display = "block"; prog.style.display = "block";
+    btn.disabled = true; btn.textContent = "Scraping...";
+    const competitors = [...document.querySelectorAll(".comp-grid input:checked")].map(c => c.value);
+    const res = await fetch("/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ segment: currentSeg, investigate_term: document.getElementById("investigate-field").value, competitors })
+    });
+    if (!res.ok) { addLog("Could not start scraper.", true); btn.disabled = false; return; }
+    const es = new EventSource("/stream");
+    es.onmessage = (e) => {
+      const d = JSON.parse(e.data);
+      if (d.type === "log") addLog(d.msg);
+      else if (d.type === "done") { es.close(); onScrapeDone(); }
+      else if (d.type === "error") { addLog(d.msg, true); es.close(); onScrapeError(); }
+    };
+    es.onerror = () => { es.close(); onScrapeError(); };
+  }
+
+  function addLog(msg, isErr=false) {
+    const log = document.getElementById("log-panel");
+    const line = document.createElement("div");
+    if (isErr) line.className = "err";
+    line.textContent = msg; log.appendChild(line); log.scrollTop = log.scrollHeight;
+  }
+
+  async function onScrapeDone() {
+    const res = await fetch("/get-html");
+    const data = await res.json();
+    document.getElementById("progress-wrap").style.display = "none";
+    const btn = document.getElementById("run-btn");
+    btn.disabled = false; btn.textContent = "\u25b6 Run Scraper";
+    document.getElementById("preview-frame").srcdoc = data.html;
+    document.getElementById("result-section").style.display = "block";
+    document.getElementById("result-section").scrollIntoView({ behavior: "smooth" });
+  }
+
+  function onScrapeError() {
+    document.getElementById("progress-wrap").style.display = "none";
+    const btn = document.getElementById("run-btn");
+    btn.disabled = false; btn.textContent = "\u25b6 Run Scraper";
+  }
+
+  async function downloadEml() {
+    const emailTo = document.getElementById("email-field").value;
+    const res = await fetch("/download-eml", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email_to: emailTo })
+    });
+    if (!res.ok) { alert("Run the scraper first."); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "LegalTech_News_Blast.eml"; a.click();
+    URL.revokeObjectURL(url);
+  }
+</script>
+</body>
+</html>
