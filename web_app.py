@@ -1,9 +1,5 @@
 """
 web_app.py  -  Flask web interface for LegalTech News Scraper
-Replaces the Outlook COM call with a .eml file download.
-
-Local run:  python web_app.py  -> opens http://localhost:5050
-Docker:     set DOCKER_ENV=1   -> skips browser open
 """
 
 import datetime
@@ -26,10 +22,10 @@ app = Flask(__name__, template_folder=str(BASE_DIR / "templates"))
 
 sys.path.insert(0, str(BASE_DIR))
 import generate_blast as gb
-from sites_config import COMPETITOR_SITES
+from sites_config import COMPETITOR_SITES, SITES
 
 # ---------------------------------------------------------------------------
-# Job state  (single-user internal tool)
+# Job state
 # ---------------------------------------------------------------------------
 _job = {"running": False, "log": [], "html": None, "error": None}
 _job_lock = threading.Lock()
@@ -58,7 +54,7 @@ def _finish_job(html=None, error=None):
 # ---------------------------------------------------------------------------
 # Scrape worker
 # ---------------------------------------------------------------------------
-def _scrape_worker(segment, investigate_term, selected_competitors):
+def _scrape_worker(segment, investigate_term, selected_news, selected_competitors):
     try:
         class SSEHandler(logging.Handler):
             def emit(self, record):
@@ -73,6 +69,15 @@ def _scrape_worker(segment, investigate_term, selected_competitors):
         news_articles, competitor_articles = gb.fetch_all_articles()
         _push_log(f"Fetched {len(news_articles)} news articles")
 
+        # Filter to only selected news sources
+        if selected_news:
+            news_articles = [
+                a for a in news_articles
+                if a.get("source", "") in selected_news
+            ]
+            _push_log(f"Filtered to {len(news_articles)} articles from selected sources")
+
+        # Filter to only selected competitors
         if selected_competitors:
             competitor_articles = [
                 a for a in competitor_articles
@@ -105,13 +110,26 @@ def _scrape_worker(segment, investigate_term, selected_competitors):
 # ---------------------------------------------------------------------------
 @app.route("/")
 def index():
+    # News sources (deduplicated)
+    news_sites = []
+    seen = set()
+    for s in SITES:
+        name = s["name"]
+        if name not in seen:
+            seen.add(name)
+            news_sites.append(name)
+
+    # Competitor sites (deduplicated)
     competitors = []
     seen = set()
     for s in COMPETITOR_SITES:
-        if s["name"] not in seen:
-            seen.add(s["name"])
-            competitors.append(s["name"])
+        name = s["name"]
+        if name not in seen:
+            seen.add(name)
+            competitors.append(name)
+
     return render_template("index.html",
+                           news_sites=news_sites,
                            competitors=competitors,
                            default_email=gb.RECIPIENTS)
 
@@ -123,10 +141,12 @@ def run_scraper():
     data = request.get_json(force=True)
     segment = data.get("segment", "Strategic")
     investigate_term = data.get("investigate_term", "")
+    selected_news = data.get("news_sites", [])
     selected_competitors = data.get("competitors", [])
     _reset_job()
     threading.Thread(target=_scrape_worker,
-                     args=(segment, investigate_term, selected_competitors),
+                     args=(segment, investigate_term,
+                           selected_news, selected_competitors),
                      daemon=True).start()
     return jsonify({"started": True})
 
@@ -196,7 +216,6 @@ def download_eml():
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5050))
-    # Skip browser open when running in Docker
     if not os.environ.get("DOCKER_ENV"):
         threading.Timer(1.2, lambda: webbrowser.open(f"http://localhost:{port}")).start()
     print(f"LegalTech News Scraper running at http://0.0.0.0:{port}")

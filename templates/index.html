@@ -13,13 +13,21 @@
     .badge { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35); border-radius: 20px; padding: 4px 12px; font-size: 0.72rem; font-weight: 600; }
     .main { max-width: 960px; margin: 28px auto; padding: 0 20px; }
     .card { background: white; border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
-    .card-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 14px; }
+    .card-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }
+    .toggle-all { font-size: 0.7rem; font-weight: 600; cursor: pointer; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; border: none; background: none; padding: 0; }
+    .toggle-all:hover { color: #475569; }
     .seg-group { display: flex; gap: 8px; }
     .seg-btn { flex: 1; padding: 10px 0; border: 2px solid #e2e8f0; border-radius: 8px; background: white; font-size: 0.9rem; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.15s; }
     .seg-btn.active-strategic { border-color: #1d4ed8; background: #eff6ff; color: #1d4ed8; }
     .seg-btn.active-sml       { border-color: #7c3aed; background: #f5f3ff; color: #7c3aed; }
     .seg-btn.active-intl      { border-color: #0369a1; background: #f0f9ff; color: #0369a1; }
-    .comp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+    .site-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+    /* Blue news source labels */
+    .news-label { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 0.87rem; transition: all 0.15s; }
+    .news-label:hover { border-color: #93c5fd; background: #eff6ff; }
+    .news-label input[type=checkbox] { accent-color: #1d4ed8; width: 15px; height: 15px; }
+    .news-label.checked { border-color: #1d4ed8; background: #eff6ff; }
+    /* Red competitor labels */
     .comp-label { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 0.87rem; transition: all 0.15s; }
     .comp-label:hover { border-color: #fca5a5; background: #fff5f5; }
     .comp-label input[type=checkbox] { accent-color: #ef4444; width: 15px; height: 15px; }
@@ -39,7 +47,7 @@
     .progress-wrap { height: 4px; background: #e2e8f0; border-radius: 2px; margin-top: 12px; overflow: hidden; display: none; }
     .progress-bar  { height: 100%; width: 30%; background: #3b82f6; border-radius: 2px; animation: slide 1.4s ease-in-out infinite; }
     @keyframes slide { 0%{margin-left:-30%} 100%{margin-left:100%} }
-    #log-panel { background: #0f172a; border-radius: 10px; padding: 14px 16px; font-family: Consolas, monospace; font-size: 0.8rem; color: #4ade80; max-height: 200px; overflow-y: auto; display: none; margin-top: 12px; line-height: 1.7; }
+    #log-panel { background: #0f172a; border-radius: 10px; padding: 14px 16px; font-family: Consolas, monospace; font-size: 0.8rem; color: #4ade80; max-height: 220px; overflow-y: auto; display: none; margin-top: 12px; line-height: 1.7; }
     #log-panel .err { color: #f87171; }
     #result-section { display: none; }
     #download-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; color: white; background: linear-gradient(135deg, #059669, #10b981); cursor: pointer; transition: all 0.15s; margin-bottom: 16px; }
@@ -59,6 +67,7 @@
 </div>
 <div class="main">
 
+  <!-- Segment -->
   <div class="card">
     <div class="card-title">Segment</div>
     <div class="seg-group">
@@ -68,18 +77,39 @@
     </div>
   </div>
 
+  <!-- News Sources -->
   <div class="card">
-    <div class="card-title">Competitor Watch</div>
-    <div class="comp-grid">
-      {% for name in competitors %}
-      <label class="comp-label checked">
-        <input type="checkbox" value="{{ name }}" checked onchange="toggleCompLabel(this)"/>
+    <div class="card-title">
+      News Sources
+      <button class="toggle-all" onclick="toggleAll('news-source', this)">Deselect All</button>
+    </div>
+    <div class="site-grid">
+      {% for name in news_sites %}
+      <label class="news-label checked">
+        <input type="checkbox" class="news-source" value="{{ name }}" checked onchange="toggleLabel(this)"/>
         {{ name }}
       </label>
       {% endfor %}
     </div>
   </div>
 
+  <!-- Competitor Watch -->
+  <div class="card">
+    <div class="card-title">
+      Competitor Watch
+      <button class="toggle-all" onclick="toggleAll('comp-source', this)">Deselect All</button>
+    </div>
+    <div class="site-grid">
+      {% for name in competitors %}
+      <label class="comp-label checked">
+        <input type="checkbox" class="comp-source" value="{{ name }}" checked onchange="toggleLabel(this)"/>
+        {{ name }}
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Fields -->
   <div class="card">
     <div class="field-row">
       <div class="field-group">
@@ -95,12 +125,14 @@
     </div>
   </div>
 
+  <!-- Run -->
   <div class="card">
     <button id="run-btn" class="strategic" onclick="runScraper()">&#9654; Run Scraper</button>
     <div class="progress-wrap" id="progress-wrap"><div class="progress-bar"></div></div>
     <div id="log-panel"></div>
   </div>
 
+  <!-- Result -->
   <div id="result-section">
     <div class="card">
       <button id="download-btn" onclick="downloadEml()">&#11015; Download Email Draft (.eml)</button>
@@ -121,8 +153,14 @@
       if (cfg.segment) setSeg(document.querySelector('[data-seg="' + cfg.segment + '"]'));
       if (cfg.email) document.getElementById("email-field").value = cfg.email;
       if (cfg.investigate) document.getElementById("investigate-field").value = cfg.investigate;
+      if (cfg.news_sites) {
+        document.querySelectorAll("input.news-source").forEach(cb => {
+          cb.checked = cfg.news_sites.includes(cb.value);
+          cb.closest("label").classList.toggle("checked", cb.checked);
+        });
+      }
       if (cfg.competitors) {
-        document.querySelectorAll(".comp-grid input[type=checkbox]").forEach(cb => {
+        document.querySelectorAll("input.comp-source").forEach(cb => {
           cb.checked = cfg.competitors.includes(cb.value);
           cb.closest("label").classList.toggle("checked", cb.checked);
         });
@@ -131,12 +169,12 @@
   });
 
   function saveSettings() {
-    const competitors = [...document.querySelectorAll(".comp-grid input:checked")].map(c => c.value);
     localStorage.setItem("nd_scraper_settings", JSON.stringify({
       segment: currentSeg,
       email: document.getElementById("email-field").value,
       investigate: document.getElementById("investigate-field").value,
-      competitors
+      news_sites: [...document.querySelectorAll("input.news-source:checked")].map(c => c.value),
+      competitors: [...document.querySelectorAll("input.comp-source:checked")].map(c => c.value),
     }));
   }
 
@@ -150,8 +188,18 @@
     document.getElementById("run-btn").className = btnCls[currentSeg];
   }
 
-  function toggleCompLabel(cb) {
+  function toggleLabel(cb) {
     cb.closest("label").classList.toggle("checked", cb.checked);
+  }
+
+  function toggleAll(cls, btn) {
+    const boxes = document.querySelectorAll("input." + cls);
+    const anyUnchecked = [...boxes].some(cb => !cb.checked);
+    boxes.forEach(cb => {
+      cb.checked = anyUnchecked;
+      cb.closest("label").classList.toggle("checked", anyUnchecked);
+    });
+    btn.textContent = anyUnchecked ? "Deselect All" : "Select All";
   }
 
   async function runScraper() {
@@ -162,13 +210,22 @@
     const btn = document.getElementById("run-btn");
     log.innerHTML = ""; log.style.display = "block"; prog.style.display = "block";
     btn.disabled = true; btn.textContent = "Scraping...";
-    const competitors = [...document.querySelectorAll(".comp-grid input:checked")].map(c => c.value);
+
+    const news_sites = [...document.querySelectorAll("input.news-source:checked")].map(c => c.value);
+    const competitors = [...document.querySelectorAll("input.comp-source:checked")].map(c => c.value);
+
     const res = await fetch("/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ segment: currentSeg, investigate_term: document.getElementById("investigate-field").value, competitors })
+      body: JSON.stringify({
+        segment: currentSeg,
+        investigate_term: document.getElementById("investigate-field").value,
+        news_sites,
+        competitors
+      })
     });
     if (!res.ok) { addLog("Could not start scraper.", true); btn.disabled = false; return; }
+
     const es = new EventSource("/stream");
     es.onmessage = (e) => {
       const d = JSON.parse(e.data);
