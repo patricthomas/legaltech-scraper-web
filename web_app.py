@@ -18,11 +18,31 @@ from flask import (Flask, Response, jsonify, render_template,
                    request, send_file, stream_with_context)
 
 BASE_DIR = Path(__file__).parent
+DATA_DIR = BASE_DIR / "data"
+DATA_DIR.mkdir(exist_ok=True)
+CUSTOM_SITES_FILE = DATA_DIR / "custom_sites.json"
+
 app = Flask(__name__, template_folder=str(BASE_DIR / "templates"))
 
 sys.path.insert(0, str(BASE_DIR))
 import generate_blast as gb
 from sites_config import COMPETITOR_SITES, SITES
+
+# ---------------------------------------------------------------------------
+# Custom sites persistence
+# ---------------------------------------------------------------------------
+def load_custom_sites() -> list[dict]:
+    if CUSTOM_SITES_FILE.exists():
+        try:
+            return json.loads(CUSTOM_SITES_FILE.read_text())
+        except Exception:
+            pass
+    return []
+
+
+def save_custom_sites(sites: list[dict]):
+    CUSTOM_SITES_FILE.write_text(json.dumps(sites, indent=2))
+
 
 # ---------------------------------------------------------------------------
 # Job state
@@ -65,19 +85,35 @@ def _scrape_worker(segment, investigate_term, selected_news, selected_competitor
         gb.log.addHandler(handler)
         gb.log.setLevel(logging.INFO)
 
+        # Inject custom RSS feeds into generate_blast's site list temporarily
+        custom = load_custom_sites()
+        original_sites = gb.fetch_all_articles.__globals__.get("SITES_SNAPSHOT")
+
         _push_log("Fetching articles from all sources...")
         news_articles, competitor_articles = gb.fetch_all_articles()
-        _push_log(f"Fetched {len(news_articles)} news articles")
 
-        # Filter to only selected news sources
+        # Scrape custom RSS feeds
+        for site in custom:
+            try:
+                custom_articles = gb.scrape_rss(site)
+                _push_log(f"  Custom feed '{site['name']}': {len(custom_articles)} articles")
+                news_articles.extend(custom_articles)
+            except Exception as e:
+                _push_log(f"  Custom feed '{site['name']}' error: {e}")
+
+        _push_log(f"Fetched {len(news_articles)} total news articles")
+
+        # Filter to selected news sources (include all custom feeds)
         if selected_news:
+            custom_names = {s["name"] for s in custom}
             news_articles = [
                 a for a in news_articles
                 if a.get("source", "") in selected_news
+                or a.get("source", "") in custom_names
             ]
             _push_log(f"Filtered to {len(news_articles)} articles from selected sources")
 
-        # Filter to only selected competitors
+        # Filter competitors
         if selected_competitors:
             competitor_articles = [
                 a for a in competitor_articles
@@ -110,27 +146,26 @@ def _scrape_worker(segment, investigate_term, selected_news, selected_competitor
 # ---------------------------------------------------------------------------
 @app.route("/")
 def index():
-    # News sources (deduplicated)
     news_sites = []
     seen = set()
     for s in SITES:
-        name = s["name"]
-        if name not in seen:
-            seen.add(name)
-            news_sites.append(name)
+        if s["name"] not in seen:
+            seen.add(s["name"])
+            news_sites.append(s["name"])
 
-    # Competitor sites (deduplicated)
     competitors = []
     seen = set()
     for s in COMPETITOR_SITES:
-        name = s["name"]
-        if name not in seen:
-            seen.add(name)
-            competitors.append(name)
+        if s["name"] not in seen:
+            seen.add(s["name"])
+            competitors.append(s["name"])
+
+    custom_sites = load_custom_sites()
 
     return render_template("index.html",
                            news_sites=news_sites,
                            competitors=competitors,
+                           custom_sites=custom_sites,
                            default_email=gb.RECIPIENTS)
 
 
@@ -139,16 +174,42 @@ def run_scraper():
     if _job["running"]:
         return jsonify({"error": "Already running"}), 409
     data = request.get_json(force=True)
-    segment = data.get("segment", "Strategic")
-    investigate_term = data.get("investigate_term", "")
-    selected_news = data.get("news_sites", [])
-    selected_competitors = data.get("competitors", [])
     _reset_job()
-    threading.Thread(target=_scrape_worker,
-                     args=(segment, investigate_term,
-                           selected_news, selected_competitors),
-                     daemon=True).start()
+    threading.Thread(
+        target=_scrape_worker,
+        args=(data.get("segment", "Strategic"),
+              data.get("investigate_term", ""),
+              data.get("news_sites", []),
+              data.get("competitors", [])),
+        daemon=True
+    ).start()
     return jsonify({"started": True})
+
+
+@app.route("/add-site", methods=["POST"])
+def add_site():
+    data = request.get_json(force=True)
+    name = data.get("name", "").strip()
+    url  = data.get("url", "").strip()
+    if not name or not url:
+        return jsonify({"error": "Name and URL are required"}), 400
+    sites = load_custom_sites()
+    if any(s["url"] == url for s in sites):
+        return jsonify({"error": "Feed URL already exists"}), 409
+    sites.append({"name": name, "url": url, "rss": url,
+                  "article_sel": None, "title_sel": None,
+                  "link_sel": None, "desc_sel": None, "base_url": ""})
+    save_custom_sites(sites)
+    return jsonify({"ok": True, "sites": sites})
+
+
+@app.route("/remove-site", methods=["POST"])
+def remove_site():
+    data = request.get_json(force=True)
+    url = data.get("url", "")
+    sites = [s for s in load_custom_sites() if s["url"] != url]
+    save_custom_sites(sites)
+    return jsonify({"ok": True, "sites": sites})
 
 
 @app.route("/stream")
@@ -196,8 +257,7 @@ def download_eml():
     if not html:
         return jsonify({"error": "No email ready yet"}), 400
     now = datetime.datetime.now()
-    day = str(now.day)
-    subject = gb.EMAIL_SUBJECT.format(date=now.strftime(f"%B {day}, %Y"))
+    subject = gb.EMAIL_SUBJECT.format(date=now.strftime(f"%B {now.day}, %Y"))
     msg = MIMEMultipart("alternative")
     msg["To"] = email_to
     msg["Subject"] = subject
@@ -211,9 +271,6 @@ def download_eml():
     )
 
 
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5050))
     if not os.environ.get("DOCKER_ENV"):

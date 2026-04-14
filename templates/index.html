@@ -1,152 +1,229 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LegalTech News Scraper</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: "Segoe UI", system-ui, sans-serif; background: #f1f5f9; color: #1e293b; min-height: 100vh; }
-    .header { background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%); color: white; padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 12px rgba(0,0,0,0.2); }
-    .header-left h1 { font-size: 1.6rem; font-weight: 700; }
-    .header-left p  { font-size: 0.8rem; opacity: 0.75; margin-top: 2px; letter-spacing: 1.5px; text-transform: uppercase; }
-    .badge { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35); border-radius: 20px; padding: 4px 12px; font-size: 0.72rem; font-weight: 600; }
-    .main { max-width: 960px; margin: 28px auto; padding: 0 20px; }
-    .card { background: white; border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
-    .card-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #64748b; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }
-    .toggle-all { font-size: 0.7rem; font-weight: 600; cursor: pointer; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; border: none; background: none; padding: 0; }
-    .toggle-all:hover { color: #475569; }
-    .seg-group { display: flex; gap: 8px; }
-    .seg-btn { flex: 1; padding: 10px 0; border: 2px solid #e2e8f0; border-radius: 8px; background: white; font-size: 0.9rem; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.15s; }
+    body { font-family: "Segoe UI", system-ui, sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; }
+
+    /* Header */
+    .header { background: linear-gradient(135deg, #1d4ed8, #1e40af); color: white; padding: 18px 32px; display: flex; align-items: center; justify-content: space-between; }
+    .header h1 { font-size: 1.4rem; font-weight: 700; }
+    .header p  { font-size: 0.72rem; opacity: 0.7; margin-top: 2px; letter-spacing: 1.5px; text-transform: uppercase; }
+    .badge { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 3px 11px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.5px; }
+
+    /* Layout */
+    .main { max-width: 820px; margin: 24px auto; padding: 0 20px 40px; }
+
+    /* Section */
+    .section { background: white; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden; }
+    .section-head { padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+    .section-head:hover { background: #f8fafc; }
+    .section-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #64748b; }
+    .section-meta  { font-size: 0.75rem; color: #94a3b8; display: flex; align-items: center; gap: 10px; }
+    .chevron { font-size: 0.65rem; color: #cbd5e1; transition: transform 0.2s; }
+    .section-body { padding: 0 20px 18px; border-top: 1px solid #f1f5f9; display: none; }
+    .section-body.open { display: block; }
+
+    /* Segment */
+    .seg-group { display: flex; gap: 8px; padding: 14px 0 2px; }
+    .seg-btn { flex: 1; padding: 9px 0; border: 2px solid #e2e8f0; border-radius: 8px; background: white; font-size: 0.88rem; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.15s; }
     .seg-btn.active-strategic { border-color: #1d4ed8; background: #eff6ff; color: #1d4ed8; }
     .seg-btn.active-sml       { border-color: #7c3aed; background: #f5f3ff; color: #7c3aed; }
     .seg-btn.active-intl      { border-color: #0369a1; background: #f0f9ff; color: #0369a1; }
-    .site-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
-    /* Blue news source labels */
-    .news-label { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 0.87rem; transition: all 0.15s; }
-    .news-label:hover { border-color: #93c5fd; background: #eff6ff; }
-    .news-label input[type=checkbox] { accent-color: #1d4ed8; width: 15px; height: 15px; }
-    .news-label.checked { border-color: #1d4ed8; background: #eff6ff; }
-    /* Red competitor labels */
-    .comp-label { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-size: 0.87rem; transition: all 0.15s; }
-    .comp-label:hover { border-color: #fca5a5; background: #fff5f5; }
-    .comp-label input[type=checkbox] { accent-color: #ef4444; width: 15px; height: 15px; }
-    .comp-label.checked { border-color: #ef4444; background: #fff5f5; }
-    .field-row { display: flex; gap: 16px; }
+
+    /* Site grids */
+    .site-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 6px; padding-top: 14px; }
+    .site-label { display: flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1.5px solid #e2e8f0; border-radius: 7px; cursor: pointer; font-size: 0.84rem; transition: all 0.12s; }
+    .site-label.news.checked  { border-color: #1d4ed8; background: #eff6ff; }
+    .site-label.comp.checked  { border-color: #ef4444; background: #fff5f5; }
+    .site-label.news input { accent-color: #1d4ed8; }
+    .site-label.comp input { accent-color: #ef4444; }
+    .site-label input { width: 14px; height: 14px; flex-shrink: 0; }
+    .toggle-row { display: flex; gap: 8px; padding-top: 12px; }
+    .small-btn { font-size: 0.72rem; font-weight: 600; color: #94a3b8; border: none; background: none; cursor: pointer; padding: 0; text-transform: uppercase; letter-spacing: 0.4px; }
+    .small-btn:hover { color: #475569; }
+
+    /* Add feed */
+    .add-feed { margin-top: 16px; padding-top: 14px; border-top: 1px solid #f1f5f9; }
+    .add-feed-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 10px; }
+    .add-feed-row { display: flex; gap: 8px; }
+    .add-feed-row input { flex: 1; padding: 8px 11px; border: 1.5px solid #e2e8f0; border-radius: 7px; font-size: 0.84rem; outline: none; transition: border 0.15s; }
+    .add-feed-row input:focus { border-color: #1d4ed8; }
+    .add-feed-row button { padding: 8px 16px; border: none; border-radius: 7px; background: #1d4ed8; color: white; font-size: 0.84rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .add-feed-row button:hover { background: #1e40af; }
+    .custom-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .custom-item { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 7px; font-size: 0.84rem; }
+    .custom-item span { color: #475569; }
+    .remove-btn { font-size: 0.7rem; color: #ef4444; background: none; border: none; cursor: pointer; font-weight: 600; }
+
+    /* Fields */
+    .fields-body { padding: 14px 20px 18px; }
+    .field-row { display: flex; gap: 14px; }
     .field-group { flex: 1; }
-    .field-group label { display: block; font-size: 0.78rem; font-weight: 600; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .field-group input { width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; outline: none; transition: border 0.15s; }
-    .field-group input:focus { border-color: #1d4ed8; box-shadow: 0 0 0 3px rgba(29,78,216,0.1); }
-    .field-group small { display: block; margin-top: 4px; font-size: 0.75rem; color: #94a3b8; }
-    #run-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; color: white; cursor: pointer; transition: all 0.15s; }
+    .field-group label { display: block; font-size: 0.72rem; font-weight: 700; color: #64748b; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .field-group input { width: 100%; padding: 9px 11px; border: 1.5px solid #e2e8f0; border-radius: 7px; font-size: 0.88rem; outline: none; transition: border 0.15s; }
+    .field-group input:focus { border-color: #1d4ed8; box-shadow: 0 0 0 3px rgba(29,78,216,0.08); }
+    .field-group small { display: block; margin-top: 4px; font-size: 0.72rem; color: #94a3b8; }
+
+    /* Run button */
+    #run-btn { width: 100%; padding: 13px; border: none; border-radius: 9px; font-size: 0.95rem; font-weight: 700; color: white; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; margin-top: 12px; }
     #run-btn.strategic { background: linear-gradient(135deg, #1d4ed8, #3b82f6); }
     #run-btn.sml       { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
     #run-btn.intl      { background: linear-gradient(135deg, #0369a1, #0ea5e9); }
-    #run-btn:hover { opacity: 0.92; transform: translateY(-1px); }
-    #run-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
-    .progress-wrap { height: 4px; background: #e2e8f0; border-radius: 2px; margin-top: 12px; overflow: hidden; display: none; }
-    .progress-bar  { height: 100%; width: 30%; background: #3b82f6; border-radius: 2px; animation: slide 1.4s ease-in-out infinite; }
+    #run-btn:hover { opacity: 0.91; transform: translateY(-1px); }
+    #run-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* Progress + log */
+    .progress-wrap { height: 3px; background: #e2e8f0; border-radius: 2px; margin-top: 10px; overflow: hidden; display: none; }
+    .progress-bar  { height: 100%; width: 30%; background: #3b82f6; animation: slide 1.4s ease-in-out infinite; }
     @keyframes slide { 0%{margin-left:-30%} 100%{margin-left:100%} }
-    #log-panel { background: #0f172a; border-radius: 10px; padding: 14px 16px; font-family: Consolas, monospace; font-size: 0.8rem; color: #4ade80; max-height: 220px; overflow-y: auto; display: none; margin-top: 12px; line-height: 1.7; }
+    #log-panel { background: #0f172a; border-radius: 8px; padding: 12px 14px; font-family: Consolas, monospace; font-size: 0.78rem; color: #4ade80; max-height: 180px; overflow-y: auto; display: none; margin-top: 10px; line-height: 1.75; }
     #log-panel .err { color: #f87171; }
-    #result-section { display: none; }
-    #download-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; color: white; background: linear-gradient(135deg, #059669, #10b981); cursor: pointer; transition: all 0.15s; margin-bottom: 16px; }
+
+    /* Result */
+    #result-section { display: none; margin-top: 12px; }
+    #download-btn { width: 100%; padding: 13px; border: none; border-radius: 9px; font-size: 0.95rem; font-weight: 700; color: white; background: linear-gradient(135deg, #059669, #10b981); cursor: pointer; transition: all 0.15s; margin-bottom: 12px; }
     #download-btn:hover { opacity: 0.9; transform: translateY(-1px); }
-    .preview-frame-wrap { border: 1.5px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
-    .preview-label { padding: 8px 14px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+    .preview-wrap { border: 1.5px solid #e2e8f0; border-radius: 9px; overflow: hidden; }
+    .preview-bar  { padding: 7px 14px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 0.72rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
     #preview-frame { width: 100%; height: 520px; border: none; }
   </style>
 </head>
 <body>
+
 <div class="header">
-  <div class="header-left">
+  <div>
     <h1>LegalTech News Scraper</h1>
     <p>NetDocuments &middot; Market Intelligence</p>
   </div>
   <span class="badge">v2 WEB</span>
 </div>
+
 <div class="main">
 
-  <!-- Segment -->
-  <div class="card">
-    <div class="card-title">Segment</div>
-    <div class="seg-group">
-      <button class="seg-btn active-strategic" data-seg="Strategic" onclick="setSeg(this)">Strategic</button>
-      <button class="seg-btn" data-seg="SML" onclick="setSeg(this)">SML</button>
-      <button class="seg-btn" data-seg="International" onclick="setSeg(this)">International</button>
+  <!-- Segment (always open, no toggle) -->
+  <div class="section">
+    <div class="section-head" style="cursor:default">
+      <span class="section-title">Segment</span>
+    </div>
+    <div class="section-body open" style="border-top:none; padding-top:0;">
+      <div class="seg-group">
+        <button class="seg-btn active-strategic" data-seg="Strategic" onclick="setSeg(this)">Strategic</button>
+        <button class="seg-btn" data-seg="SML" onclick="setSeg(this)">SML</button>
+        <button class="seg-btn" data-seg="International" onclick="setSeg(this)">International</button>
+      </div>
     </div>
   </div>
 
-  <!-- News Sources -->
-  <div class="card">
-    <div class="card-title">
-      News Sources
-      <button class="toggle-all" onclick="toggleAll('news-source', this)">Deselect All</button>
+  <!-- News Sources (collapsible) -->
+  <div class="section">
+    <div class="section-head" onclick="toggleSection(this)">
+      <span class="section-title">News Sources</span>
+      <span class="section-meta">
+        <span id="news-count">{{ news_sites|length }} selected</span>
+        <span class="chevron">▼</span>
+      </span>
     </div>
-    <div class="site-grid">
-      {% for name in news_sites %}
-      <label class="news-label checked">
-        <input type="checkbox" class="news-source" value="{{ name }}" checked onchange="toggleLabel(this)"/>
-        {{ name }}
-      </label>
-      {% endfor %}
+    <div class="section-body">
+      <div class="site-grid" id="news-grid">
+        {% for name in news_sites %}
+        <label class="site-label news checked">
+          <input type="checkbox" class="news-source" value="{{ name }}" checked onchange="toggleSiteLabel(this); updateCount('news-source','news-count')"/>
+          {{ name }}
+        </label>
+        {% endfor %}
+      </div>
+      <div class="toggle-row">
+        <button class="small-btn" onclick="setAll('news-source', true); updateCount('news-source','news-count')">Select All</button>
+        <span style="color:#e2e8f0">·</span>
+        <button class="small-btn" onclick="setAll('news-source', false); updateCount('news-source','news-count')">Deselect All</button>
+      </div>
+
+      <!-- Add custom RSS feed -->
+      <div class="add-feed">
+        <div class="add-feed-title">Add RSS Feed</div>
+        <div class="add-feed-row">
+          <input id="feed-name" type="text" placeholder="Feed name (e.g. My Blog)"/>
+          <input id="feed-url"  type="url"  placeholder="RSS URL"/>
+          <button onclick="addFeed()">+ Add</button>
+        </div>
+        <div class="custom-list" id="custom-list">
+          {% for site in custom_sites %}
+          <div class="custom-item" id="custom-{{ loop.index }}">
+            <span>{{ site.name }} <span style="color:#94a3b8;font-size:0.75rem">— {{ site.url }}</span></span>
+            <button class="remove-btn" onclick="removeFeed('{{ site.url }}', this)">✕ Remove</button>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Competitor Watch -->
-  <div class="card">
-    <div class="card-title">
-      Competitor Watch
-      <button class="toggle-all" onclick="toggleAll('comp-source', this)">Deselect All</button>
+  <!-- Competitor Watch (collapsible) -->
+  <div class="section">
+    <div class="section-head" onclick="toggleSection(this)">
+      <span class="section-title">Competitor Watch</span>
+      <span class="section-meta">
+        <span id="comp-count">{{ competitors|length }} selected</span>
+        <span class="chevron">▼</span>
+      </span>
     </div>
-    <div class="site-grid">
-      {% for name in competitors %}
-      <label class="comp-label checked">
-        <input type="checkbox" class="comp-source" value="{{ name }}" checked onchange="toggleLabel(this)"/>
-        {{ name }}
-      </label>
-      {% endfor %}
+    <div class="section-body">
+      <div class="site-grid">
+        {% for name in competitors %}
+        <label class="site-label comp checked">
+          <input type="checkbox" class="comp-source" value="{{ name }}" checked onchange="toggleSiteLabel(this); updateCount('comp-source','comp-count')"/>
+          {{ name }}
+        </label>
+        {% endfor %}
+      </div>
+      <div class="toggle-row">
+        <button class="small-btn" onclick="setAll('comp-source', true); updateCount('comp-source','comp-count')">Select All</button>
+        <span style="color:#e2e8f0">·</span>
+        <button class="small-btn" onclick="setAll('comp-source', false); updateCount('comp-source','comp-count')">Deselect All</button>
+      </div>
     </div>
   </div>
 
   <!-- Fields -->
-  <div class="card">
-    <div class="field-row">
-      <div class="field-group">
-        <label>Email Recipient</label>
-        <input id="email-field" type="email" value="{{ default_email }}" placeholder="someone@netdocuments.com"/>
-        <small>Overrides the default To: address</small>
+  <div class="section">
+    <div class="fields-body">
+      <div class="field-row">
+        <div class="field-group">
+          <label>Email Recipient</label>
+          <input id="email-field" type="email" value="{{ default_email }}" placeholder="someone@netdocuments.com"/>
+          <small>Overrides the default To: address</small>
+        </div>
+        <div class="field-group">
+          <label>Investigate Term</label>
+          <input id="investigate-field" type="text" placeholder="e.g. contract lifecycle management"/>
+          <small>Ranks same as netdocuments (+30 pts)</small>
+        </div>
       </div>
-      <div class="field-group">
-        <label>Investigate Term</label>
-        <input id="investigate-field" type="text" placeholder="e.g. contract lifecycle management"/>
-        <small>Ranks same as netdocuments (+30 pts)</small>
-      </div>
+      <button id="run-btn" class="strategic" onclick="runScraper()">&#9654; Run Scraper</button>
+      <div class="progress-wrap" id="progress-wrap"><div class="progress-bar"></div></div>
+      <div id="log-panel"></div>
     </div>
-  </div>
-
-  <!-- Run -->
-  <div class="card">
-    <button id="run-btn" class="strategic" onclick="runScraper()">&#9654; Run Scraper</button>
-    <div class="progress-wrap" id="progress-wrap"><div class="progress-bar"></div></div>
-    <div id="log-panel"></div>
   </div>
 
   <!-- Result -->
   <div id="result-section">
-    <div class="card">
-      <button id="download-btn" onclick="downloadEml()">&#11015; Download Email Draft (.eml)</button>
-      <div class="preview-frame-wrap">
-        <div class="preview-label">Email Preview</div>
-        <iframe id="preview-frame"></iframe>
-      </div>
+    <button id="download-btn" onclick="downloadEml()">&#11015; Download Email Draft (.eml)</button>
+    <div class="preview-wrap">
+      <div class="preview-bar">Email Preview</div>
+      <iframe id="preview-frame"></iframe>
     </div>
   </div>
 
 </div>
+
 <script>
   let currentSeg = "Strategic";
 
+  // Restore settings
   window.addEventListener("load", () => {
     try {
       const cfg = JSON.parse(localStorage.getItem("nd_scraper_settings") || "{}");
@@ -156,15 +233,17 @@
       if (cfg.news_sites) {
         document.querySelectorAll("input.news-source").forEach(cb => {
           cb.checked = cfg.news_sites.includes(cb.value);
-          cb.closest("label").classList.toggle("checked", cb.checked);
+          toggleSiteLabel(cb);
         });
       }
       if (cfg.competitors) {
         document.querySelectorAll("input.comp-source").forEach(cb => {
           cb.checked = cfg.competitors.includes(cb.value);
-          cb.closest("label").classList.toggle("checked", cb.checked);
+          toggleSiteLabel(cb);
         });
       }
+      updateCount("news-source", "news-count");
+      updateCount("comp-source", "comp-count");
     } catch(e) {}
   });
 
@@ -181,47 +260,94 @@
   function setSeg(btn) {
     if (!btn) return;
     document.querySelectorAll(".seg-btn").forEach(b => b.className = "seg-btn");
-    const mapCls = { Strategic: "active-strategic", SML: "active-sml", International: "active-intl" };
-    const btnCls = { Strategic: "strategic", SML: "sml", International: "intl" };
-    btn.classList.add(mapCls[btn.dataset.seg]);
+    const map = { Strategic:"active-strategic", SML:"active-sml", International:"active-intl" };
+    const cls = { Strategic:"strategic", SML:"sml", International:"intl" };
+    btn.classList.add(map[btn.dataset.seg]);
     currentSeg = btn.dataset.seg;
-    document.getElementById("run-btn").className = btnCls[currentSeg];
+    document.getElementById("run-btn").className = cls[currentSeg];
   }
 
-  function toggleLabel(cb) {
-    cb.closest("label").classList.toggle("checked", cb.checked);
+  function toggleSection(head) {
+    const body = head.nextElementSibling;
+    const chevron = head.querySelector(".chevron");
+    const isOpen = body.classList.toggle("open");
+    chevron.style.transform = isOpen ? "rotate(180deg)" : "";
   }
 
-  function toggleAll(cls, btn) {
-    const boxes = document.querySelectorAll("input." + cls);
-    const anyUnchecked = [...boxes].some(cb => !cb.checked);
-    boxes.forEach(cb => {
-      cb.checked = anyUnchecked;
-      cb.closest("label").classList.toggle("checked", anyUnchecked);
+  function toggleSiteLabel(cb) {
+    const label = cb.closest("label");
+    if (cb.checked) label.classList.add("checked");
+    else label.classList.remove("checked");
+  }
+
+  function setAll(cls, state) {
+    document.querySelectorAll("input." + cls).forEach(cb => {
+      cb.checked = state;
+      toggleSiteLabel(cb);
     });
-    btn.textContent = anyUnchecked ? "Deselect All" : "Select All";
   }
 
+  function updateCount(cls, countId) {
+    const total   = document.querySelectorAll("input." + cls).length;
+    const checked = document.querySelectorAll("input." + cls + ":checked").length;
+    document.getElementById(countId).textContent = checked + " of " + total + " selected";
+  }
+
+  // Custom feed management
+  async function addFeed() {
+    const name = document.getElementById("feed-name").value.trim();
+    const url  = document.getElementById("feed-url").value.trim();
+    if (!name || !url) { alert("Please enter both a name and an RSS URL."); return; }
+    const res = await fetch("/add-site", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({name, url})
+    });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error || "Could not add feed."); return; }
+    document.getElementById("feed-name").value = "";
+    document.getElementById("feed-url").value  = "";
+    renderCustomList(data.sites);
+  }
+
+  async function removeFeed(url, btn) {
+    const res = await fetch("/remove-site", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({url})
+    });
+    const data = await res.json();
+    if (res.ok) renderCustomList(data.sites);
+  }
+
+  function renderCustomList(sites) {
+    const list = document.getElementById("custom-list");
+    list.innerHTML = sites.map(s =>
+      `<div class="custom-item">
+        <span>${s.name} <span style="color:#94a3b8;font-size:0.75rem">— ${s.url}</span></span>
+        <button class="remove-btn" onclick="removeFeed('${s.url}', this)">✕ Remove</button>
+      </div>`
+    ).join("");
+  }
+
+  // Run scraper
   async function runScraper() {
     saveSettings();
     document.getElementById("result-section").style.display = "none";
-    const log = document.getElementById("log-panel");
+    const log  = document.getElementById("log-panel");
     const prog = document.getElementById("progress-wrap");
-    const btn = document.getElementById("run-btn");
+    const btn  = document.getElementById("run-btn");
     log.innerHTML = ""; log.style.display = "block"; prog.style.display = "block";
     btn.disabled = true; btn.textContent = "Scraping...";
 
-    const news_sites = [...document.querySelectorAll("input.news-source:checked")].map(c => c.value);
-    const competitors = [...document.querySelectorAll("input.comp-source:checked")].map(c => c.value);
-
     const res = await fetch("/run", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {"Content-Type":"application/json"},
       body: JSON.stringify({
         segment: currentSeg,
         investigate_term: document.getElementById("investigate-field").value,
-        news_sites,
-        competitors
+        news_sites: [...document.querySelectorAll("input.news-source:checked")].map(c => c.value),
+        competitors: [...document.querySelectorAll("input.comp-source:checked")].map(c => c.value),
       })
     });
     if (!res.ok) { addLog("Could not start scraper.", true); btn.disabled = false; return; }
@@ -230,49 +356,46 @@
     es.onmessage = (e) => {
       const d = JSON.parse(e.data);
       if (d.type === "log") addLog(d.msg);
-      else if (d.type === "done") { es.close(); onScrapeDone(); }
-      else if (d.type === "error") { addLog(d.msg, true); es.close(); onScrapeError(); }
+      else if (d.type === "done")  { es.close(); onDone(); }
+      else if (d.type === "error") { addLog(d.msg, true); es.close(); onError(); }
     };
-    es.onerror = () => { es.close(); onScrapeError(); };
+    es.onerror = () => { es.close(); onError(); };
   }
 
   function addLog(msg, isErr=false) {
-    const log = document.getElementById("log-panel");
+    const log  = document.getElementById("log-panel");
     const line = document.createElement("div");
     if (isErr) line.className = "err";
     line.textContent = msg; log.appendChild(line); log.scrollTop = log.scrollHeight;
   }
 
-  async function onScrapeDone() {
-    const res = await fetch("/get-html");
-    const data = await res.json();
+  async function onDone() {
+    const data = await (await fetch("/get-html")).json();
     document.getElementById("progress-wrap").style.display = "none";
     const btn = document.getElementById("run-btn");
     btn.disabled = false; btn.textContent = "\u25b6 Run Scraper";
     document.getElementById("preview-frame").srcdoc = data.html;
     document.getElementById("result-section").style.display = "block";
-    document.getElementById("result-section").scrollIntoView({ behavior: "smooth" });
+    document.getElementById("result-section").scrollIntoView({behavior:"smooth"});
   }
 
-  function onScrapeError() {
+  function onError() {
     document.getElementById("progress-wrap").style.display = "none";
     const btn = document.getElementById("run-btn");
     btn.disabled = false; btn.textContent = "\u25b6 Run Scraper";
   }
 
   async function downloadEml() {
-    const emailTo = document.getElementById("email-field").value;
     const res = await fetch("/download-eml", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email_to: emailTo })
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({email_to: document.getElementById("email-field").value})
     });
     if (!res.ok) { alert("Run the scraper first."); return; }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = "LegalTech_News_Blast.eml"; a.click();
-    URL.revokeObjectURL(url);
+    a.href = URL.createObjectURL(await res.blob());
+    a.download = "LegalTech_News_Blast.eml";
+    a.click();
   }
 </script>
 </body>

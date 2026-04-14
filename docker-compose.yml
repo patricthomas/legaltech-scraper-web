@@ -8,3 +8,8 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - DOCKER_ENV=1
+    volumes:
+      - scraper_data:/app/data
+
+volumes:
+  scraper_data:
