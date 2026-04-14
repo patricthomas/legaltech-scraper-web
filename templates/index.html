@@ -66,6 +66,8 @@
     .field-group label { display: block; font-size: 0.72rem; font-weight: 700; color: #64748b; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
     .field-group input { width: 100%; padding: 9px 11px; border: 1.5px solid #e2e8f0; border-radius: 7px; font-size: 0.88rem; outline: none; transition: border 0.15s; }
     .field-group input:focus { border-color: #1d4ed8; box-shadow: 0 0 0 3px rgba(29,78,216,0.08); }
+    .field-group select { width: 100%; padding: 9px 11px; border: 1.5px solid #e2e8f0; border-radius: 7px; font-size: 0.88rem; outline: none; background: white; cursor: pointer; transition: border 0.15s; }
+    .field-group select:focus { border-color: #1d4ed8; box-shadow: 0 0 0 3px rgba(29,78,216,0.08); }
     .field-group small { display: block; margin-top: 4px; font-size: 0.72rem; color: #94a3b8; }
 
     /* Run button */
@@ -154,7 +156,7 @@
           {% for site in custom_sites %}
           <div class="custom-item" id="custom-{{ loop.index }}">
             <span>{{ site.name }} <span style="color:#94a3b8;font-size:0.75rem">— {{ site.url }}</span></span>
-            <button class="remove-btn" onclick="removeFeed('{{ site.url }}', this)">✕ Remove</button>
+            <button class="remove-btn" onclick="removeFeed('{{ site.url }}', this)">&#10005; Remove</button>
           </div>
           {% endfor %}
         </div>
@@ -202,6 +204,15 @@
           <input id="investigate-field" type="text" placeholder="e.g. contract lifecycle management"/>
           <small>Ranks same as netdocuments (+30 pts)</small>
         </div>
+        <div class="field-group" style="max-width:160px">
+          <label>Lookback Window</label>
+          <select id="days-field">
+            <option value="7" selected>7 days</option>
+            <option value="14">14 days</option>
+            <option value="30">30 days</option>
+          </select>
+          <small>How far back to fetch articles</small>
+        </div>
       </div>
       <button id="run-btn" class="strategic" onclick="runScraper()">&#9654; Run Scraper</button>
       <div class="progress-wrap" id="progress-wrap"><div class="progress-bar"></div></div>
@@ -230,6 +241,7 @@
       if (cfg.segment) setSeg(document.querySelector('[data-seg="' + cfg.segment + '"]'));
       if (cfg.email) document.getElementById("email-field").value = cfg.email;
       if (cfg.investigate) document.getElementById("investigate-field").value = cfg.investigate;
+      if (cfg.days) document.getElementById("days-field").value = cfg.days;
       if (cfg.news_sites) {
         document.querySelectorAll("input.news-source").forEach(cb => {
           cb.checked = cfg.news_sites.includes(cb.value);
@@ -252,6 +264,7 @@
       segment: currentSeg,
       email: document.getElementById("email-field").value,
       investigate: document.getElementById("investigate-field").value,
+      days: document.getElementById("days-field").value,
       news_sites: [...document.querySelectorAll("input.news-source:checked")].map(c => c.value),
       competitors: [...document.querySelectorAll("input.comp-source:checked")].map(c => c.value),
     }));
@@ -325,7 +338,7 @@
     list.innerHTML = sites.map(s =>
       `<div class="custom-item">
         <span>${s.name} <span style="color:#94a3b8;font-size:0.75rem">— ${s.url}</span></span>
-        <button class="remove-btn" onclick="removeFeed('${s.url}', this)">✕ Remove</button>
+        <button class="remove-btn" onclick="removeFeed('${s.url}', this)">&#10005; Remove</button>
       </div>`
     ).join("");
   }
@@ -340,6 +353,8 @@
     log.innerHTML = ""; log.style.display = "block"; prog.style.display = "block";
     btn.disabled = true; btn.textContent = "Scraping...";
 
+    const days = parseInt(document.getElementById("days-field").value) || 7;
+
     const res = await fetch("/run", {
       method: "POST",
       headers: {"Content-Type":"application/json"},
@@ -348,6 +363,7 @@
         investigate_term: document.getElementById("investigate-field").value,
         news_sites: [...document.querySelectorAll("input.news-source:checked")].map(c => c.value),
         competitors: [...document.querySelectorAll("input.comp-source:checked")].map(c => c.value),
+        days: days,
       })
     });
     if (!res.ok) { addLog("Could not start scraper.", true); btn.disabled = false; return; }

@@ -163,27 +163,27 @@ def _safe_text(tag) -> str:
     return " ".join(tag.get_text(separator=" ", strip=True).split())
 
 
-def _is_within_age_limit(entry) -> bool:
-    """Return True if the RSS entry is within MAX_AGE_DAYS, or if its date is unknown."""
+def _is_within_age_limit(entry, max_age_days: int = MAX_AGE_DAYS) -> bool:
+    """Return True if the RSS entry is within max_age_days, or if its date is unknown."""
     pub = entry.get("published_parsed") or entry.get("updated_parsed")
     if pub is None:
         return True  # no date info — include it
     try:
         pub_dt = datetime.datetime(*pub[:6], tzinfo=datetime.timezone.utc)
-        cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=MAX_AGE_DAYS)
+        cutoff = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=max_age_days)
         return pub_dt >= cutoff
     except (TypeError, ValueError):
         return True  # can't parse date — include it
 
 
-def scrape_rss(config: dict) -> list[dict]:
+def scrape_rss(config: dict, max_age_days: int = MAX_AGE_DAYS) -> list[dict]:
     is_competitor = config.get("competitor", False)
     try:
         feed = feedparser.parse(config["rss"])
         articles = []
         for entry in feed.entries[:ARTICLES_PER_SITE]:
-            # Skip articles older than MAX_AGE_DAYS
-            if not _is_within_age_limit(entry):
+            # Skip articles older than max_age_days
+            if not _is_within_age_limit(entry, max_age_days):
                 continue
             title = (entry.get("title") or "").strip()
             url   = (entry.get("link")  or "").strip()
@@ -200,7 +200,7 @@ def scrape_rss(config: dict) -> list[dict]:
                     "desc":       desc,
                     "competitor": is_competitor,
                 })
-        log.info("  %s (RSS): %d articles (≤%dd)", config["name"], len(articles), MAX_AGE_DAYS)
+        log.info("  %s (RSS): %d articles (≤%dd)", config["name"], len(articles), max_age_days)
         return articles
     except Exception as exc:
         log.warning("  %s (RSS) failed: %s", config["name"], exc)
@@ -252,7 +252,7 @@ def scrape_html(config: dict) -> list[dict]:
     return articles
 
 
-def fetch_all_articles() -> tuple[list[dict], list[dict]]:
+def fetch_all_articles(max_age_days: int = MAX_AGE_DAYS) -> tuple[list[dict], list[dict]]:
     """
     Scrape all regular news sources AND competitor sites.
 
@@ -271,7 +271,7 @@ def fetch_all_articles() -> tuple[list[dict], list[dict]]:
     for site in SITES:
         log.info("Fetching %s …", site["name"])
         if site.get("rss"):
-            regular_articles.extend(scrape_rss(site))
+            regular_articles.extend(scrape_rss(site, max_age_days))
         else:
             regular_articles.extend(scrape_html(site))
 
@@ -279,7 +279,7 @@ def fetch_all_articles() -> tuple[list[dict], list[dict]]:
     for site in COMPETITOR_SITES:
         log.info("Fetching %s …", site["name"])
         if site.get("rss"):
-            competitor_articles.extend(scrape_rss(site))
+            competitor_articles.extend(scrape_rss(site, max_age_days))
         else:
             competitor_articles.extend(scrape_html(site))
 

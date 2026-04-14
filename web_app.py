@@ -10,6 +10,7 @@ import os
 import sys
 import threading
 import webbrowser
+from collections import Counter
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
@@ -74,7 +75,8 @@ def _finish_job(html=None, error=None):
 # ---------------------------------------------------------------------------
 # Scrape worker
 # ---------------------------------------------------------------------------
-def _scrape_worker(segment, investigate_term, selected_news, selected_competitors):
+def _scrape_worker(segment, investigate_term, selected_news,
+                   selected_competitors, max_age_days=7):
     try:
         class SSEHandler(logging.Handler):
             def emit(self, record):
@@ -85,25 +87,31 @@ def _scrape_worker(segment, investigate_term, selected_news, selected_competitor
         gb.log.addHandler(handler)
         gb.log.setLevel(logging.INFO)
 
-        # Inject custom RSS feeds into generate_blast's site list temporarily
-        custom = load_custom_sites()
-        original_sites = gb.fetch_all_articles.__globals__.get("SITES_SNAPSHOT")
-
-        _push_log("Fetching articles from all sources...")
-        news_articles, competitor_articles = gb.fetch_all_articles()
+        _push_log(f"🔍 Fetching articles (last {max_age_days} days)…")
+        news_articles, competitor_articles = gb.fetch_all_articles(
+            max_age_days=max_age_days
+        )
 
         # Scrape custom RSS feeds
+        custom = load_custom_sites()
         for site in custom:
             try:
-                custom_articles = gb.scrape_rss(site)
+                custom_articles = gb.scrape_rss(site, max_age_days=max_age_days)
                 _push_log(f"  Custom feed '{site['name']}': {len(custom_articles)} articles")
                 news_articles.extend(custom_articles)
             except Exception as e:
                 _push_log(f"  Custom feed '{site['name']}' error: {e}")
 
-        _push_log(f"Fetched {len(news_articles)} total news articles")
+        # Per-source breakdown
+        src_counts = Counter(a["source"] for a in news_articles)
+        if src_counts:
+            parts = [f"{src} ({cnt})"
+                     for src, cnt in sorted(src_counts.items(), key=lambda x: -x[1])]
+            _push_log("📊 Per source: " + ",  ".join(parts))
 
-        # Filter to selected news sources (include all custom feeds)
+        _push_log(f"✅ {len(news_articles)} total articles across {len(src_counts)} sources")
+
+        # Filter to selected news sources (always include custom feeds)
         if selected_news:
             custom_names = {s["name"] for s in custom}
             news_articles = [
@@ -111,7 +119,7 @@ def _scrape_worker(segment, investigate_term, selected_news, selected_competitor
                 if a.get("source", "") in selected_news
                 or a.get("source", "") in custom_names
             ]
-            _push_log(f"Filtered to {len(news_articles)} articles from selected sources")
+            _push_log(f"   → {len(news_articles)} after source filter")
 
         # Filter competitors
         if selected_competitors:
@@ -121,20 +129,20 @@ def _scrape_worker(segment, investigate_term, selected_news, selected_competitor
                        for sel in selected_competitors)
             ]
 
-        _push_log(f"Scoring and curating top {gb.TOP_N} articles...")
+        _push_log(f"📝 Scoring and curating top {gb.TOP_N} articles…")
         top = gb.curate(news_articles, segment=segment,
                         investigate_term=investigate_term)
-        _push_log(f"Selected {len(top)} top articles")
+        _push_log(f"✅ Selected {len(top)} top articles")
 
-        _push_log("Building email HTML...")
+        _push_log("📧 Building email HTML…")
         html = gb.build_html(top, news_articles,
                              competitor_articles=competitor_articles,
                              segment=segment)
-        _push_log("Done! Email draft ready to download.")
+        _push_log("✅ Done! Email draft ready to download.")
         _finish_job(html=html)
 
     except Exception as exc:
-        _push_log(f"Error: {exc}")
+        _push_log(f"❌ Error: {exc}")
         _finish_job(error=str(exc))
     finally:
         gb.log.handlers = [h for h in gb.log.handlers
@@ -180,7 +188,8 @@ def run_scraper():
         args=(data.get("segment", "Strategic"),
               data.get("investigate_term", ""),
               data.get("news_sites", []),
-              data.get("competitors", [])),
+              data.get("competitors", []),
+              int(data.get("days", 7))),
         daemon=True
     ).start()
     return jsonify({"started": True})
