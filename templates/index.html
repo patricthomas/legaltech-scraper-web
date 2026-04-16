@@ -259,7 +259,7 @@
       if (cfg.days) document.getElementById("days-field").value = cfg.days;
       if (cfg.news_sites) {
         document.querySelectorAll("input.news-source").forEach(cb => {
-          // Only restore checked state for visible (non-corp-only) sources
+          // Only restore checked state for non-corp-only sources
           if (!cb.closest('label').classList.contains('corp-only')) {
             cb.checked = cfg.news_sites.includes(cb.value);
             toggleSiteLabel(cb);
@@ -303,7 +303,7 @@
     const corpLabels = document.querySelectorAll('.corp-only');
     if (currentSeg === 'Corporate') {
       corpLabels.forEach(lbl => {
-        lbl.style.display = '';
+        lbl.style.display = 'flex';  // override CSS class — must use flex not ''
         const cb = lbl.querySelector('input');
         cb.checked = true;
         toggleSiteLabel(cb);
@@ -334,17 +334,17 @@
 
   function setAll(cls, state) {
     document.querySelectorAll("input." + cls).forEach(cb => {
-      // Don't toggle hidden corp-only sources
-      if (cb.closest('label').style.display === 'none') return;
+      // Don't toggle sources hidden by CSS or inline style
+      if (getComputedStyle(cb.closest('label')).display === 'none') return;
       cb.checked = state;
       toggleSiteLabel(cb);
     });
   }
 
   function updateCount(cls, countId) {
-    // Only count inputs in visible labels
+    // Use getComputedStyle to catch both CSS-class and inline-style hidden elements
     const inputs = [...document.querySelectorAll("input." + cls)]
-                     .filter(inp => inp.closest('label').style.display !== 'none');
+                     .filter(inp => getComputedStyle(inp.closest('label')).display !== 'none');
     const total   = inputs.length;
     const checked = inputs.filter(inp => inp.checked).length;
     document.getElementById(countId).textContent = checked + " of " + total + " selected";
