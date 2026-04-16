@@ -3,6 +3,7 @@ web_app.py  -  Flask web interface for LegalTech News Scraper
 """
 
 import datetime
+import csv
 import io
 import json
 import logging
@@ -48,7 +49,7 @@ def save_custom_sites(sites: list[dict]):
 # ---------------------------------------------------------------------------
 # Job state
 # ---------------------------------------------------------------------------
-_job = {"running": False, "log": [], "html": None, "error": None}
+_job = {"running": False, "log": [], "html": None, "error": None, "articles": None}
 _job_lock = threading.Lock()
 
 
@@ -58,6 +59,7 @@ def _reset_job():
         _job["log"] = []
         _job["html"] = None
         _job["error"] = None
+        _job["articles"] = None
 
 
 def _push_log(msg: str):
@@ -65,11 +67,12 @@ def _push_log(msg: str):
         _job["log"].append(msg)
 
 
-def _finish_job(html=None, error=None):
+def _finish_job(html=None, error=None, articles=None):
     with _job_lock:
         _job["running"] = False
         _job["html"] = html
         _job["error"] = error
+        _job["articles"] = articles
 
 
 # ---------------------------------------------------------------------------
@@ -150,7 +153,14 @@ def _scrape_worker(segment, investigate_term, selected_news,
                              competitor_articles=competitor_articles,
                              segment=segment)
         _push_log("✅ Done! Email draft ready to download.")
-        _finish_job(html=html)
+        # Score all articles for the CSV (top articles already have scores)
+        top_urls = {a["url"] for a in top}
+        for a in news_articles:
+            if "score" not in a:
+                a["score"] = gb.score_article(a, segment=segment,
+                                               investigate_term=investigate_term)
+        all_scraped = news_articles + competitor_articles
+        _finish_job(html=html, articles=all_scraped)
 
     except Exception as exc:
         _push_log(f"❌ Error: {exc}")
@@ -288,6 +298,38 @@ def download_eml():
         mimetype="message/rfc822",
         as_attachment=True,
         download_name="LegalTech_News_Blast.eml",
+    )
+
+
+@app.route("/download-csv")
+def download_csv():
+    with _job_lock:
+        articles = _job.get("articles")
+    if not articles:
+        return jsonify({"error": "No data ready yet — run the scraper first"}), 400
+
+    now = datetime.datetime.now()
+    filename = f"legaltech_blast_{now.strftime('%Y%m%d_%H%M%S')}.csv"
+
+    output = io.StringIO()
+    fieldnames = ["source", "title", "url", "desc", "score", "competitor"]
+    writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
+    writer.writeheader()
+    for a in articles:
+        writer.writerow({
+            "source":     a.get("source", ""),
+            "title":      a.get("title", ""),
+            "url":        a.get("url", ""),
+            "desc":       a.get("desc", ""),
+            "score":      a.get("score", ""),
+            "competitor": "yes" if a.get("competitor") else "no",
+        })
+
+    return send_file(
+        io.BytesIO(output.getvalue().encode("utf-8")),
+        mimetype="text/csv",
+        as_attachment=True,
+        download_name=filename,
     )
 
 

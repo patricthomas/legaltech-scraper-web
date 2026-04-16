@@ -91,6 +91,8 @@
     #result-section { display: none; margin-top: 12px; }
     #download-btn { width: 100%; padding: 13px; border: none; border-radius: 9px; font-size: 0.95rem; font-weight: 700; color: white; background: linear-gradient(135deg, #059669, #10b981); cursor: pointer; transition: all 0.15s; margin-bottom: 12px; }
     #download-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    #csv-btn { width: 100%; padding: 11px; border: 1.5px solid #0369a1; border-radius: 9px; font-size: 0.88rem; font-weight: 600; color: #0369a1; background: white; cursor: pointer; transition: all 0.15s; margin-bottom: 12px; }
+    #csv-btn:hover { background: #f0f9ff; transform: translateY(-1px); }
     .preview-wrap { border: 1.5px solid #e2e8f0; border-radius: 9px; overflow: hidden; }
     .preview-bar  { padding: 7px 14px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 0.72rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
     #preview-frame { width: 100%; height: 520px; border: none; }
@@ -226,6 +228,7 @@
   <!-- Result -->
   <div id="result-section">
     <button id="download-btn" onclick="downloadEml()">&#11015; Download Email Draft (.eml)</button>
+    <button id="csv-btn" onclick="downloadCsv()">&#128202; Download All Articles (.csv)</button>
     <div class="preview-wrap">
       <div class="preview-bar">Email Preview</div>
       <iframe id="preview-frame"></iframe>
@@ -402,6 +405,13 @@
     document.getElementById("progress-wrap").style.display = "none";
     const btn = document.getElementById("run-btn");
     btn.disabled = false; btn.textContent = "\u25b6 Run Scraper";
+  }
+
+  async function downloadCsv() {
+    const a = document.createElement("a");
+    a.href = "/download-csv";
+    a.download = "";
+    a.click();
   }
 
   async function downloadEml() {
