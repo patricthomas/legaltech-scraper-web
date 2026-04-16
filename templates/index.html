@@ -33,6 +33,7 @@
     .seg-btn.active-strategic { border-color: #1d4ed8; background: #eff6ff; color: #1d4ed8; }
     .seg-btn.active-sml       { border-color: #7c3aed; background: #f5f3ff; color: #7c3aed; }
     .seg-btn.active-intl      { border-color: #0369a1; background: #f0f9ff; color: #0369a1; }
+    .seg-btn.active-corp      { border-color: #0f766e; background: #f0fdfa; color: #0f766e; }
 
     /* Site grids */
     .site-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 6px; padding-top: 14px; }
@@ -75,6 +76,7 @@
     #run-btn.strategic { background: linear-gradient(135deg, #1d4ed8, #3b82f6); }
     #run-btn.sml       { background: linear-gradient(135deg, #7c3aed, #a78bfa); }
     #run-btn.intl      { background: linear-gradient(135deg, #0369a1, #0ea5e9); }
+    #run-btn.corp      { background: linear-gradient(135deg, #0f766e, #14b8a6); }
     #run-btn:hover { opacity: 0.91; transform: translateY(-1px); }
     #run-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
@@ -116,6 +118,7 @@
         <button class="seg-btn active-strategic" data-seg="Strategic" onclick="setSeg(this)">Strategic</button>
         <button class="seg-btn" data-seg="SML" onclick="setSeg(this)">SML</button>
         <button class="seg-btn" data-seg="International" onclick="setSeg(this)">International</button>
+        <button class="seg-btn" data-seg="Corporate" onclick="setSeg(this)">Corporate</button>
       </div>
     </div>
   </div>
@@ -273,8 +276,8 @@
   function setSeg(btn) {
     if (!btn) return;
     document.querySelectorAll(".seg-btn").forEach(b => b.className = "seg-btn");
-    const map = { Strategic:"active-strategic", SML:"active-sml", International:"active-intl" };
-    const cls = { Strategic:"strategic", SML:"sml", International:"intl" };
+    const map = { Strategic:"active-strategic", SML:"active-sml", International:"active-intl", Corporate:"active-corp" };
+    const cls = { Strategic:"strategic", SML:"sml", International:"intl", Corporate:"corp" };
     btn.classList.add(map[btn.dataset.seg]);
     currentSeg = btn.dataset.seg;
     document.getElementById("run-btn").className = cls[currentSeg];

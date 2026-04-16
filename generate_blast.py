@@ -53,7 +53,7 @@ SCORE_RULES = [
 
     # Competitor intel
     (18, ["imanage", "opentext", "worldox", "docuware", "sharepoint dms",
-          "legal server", "alfresco"]),
+          "legal server", "alfresco", "harvey", "harvey.ai", "legora"]),
 
     # Document management core
     (14, ["document management", "dms", "document workflow", "knowledge management",
@@ -140,6 +140,30 @@ SEGMENT_SCORE_MODIFIERS = {
 
     # Strategic — Default scoring, no modifiers
     "Strategic": [],
+
+    # Corporate — In-house / corporate legal department scoring
+    # Boost: CLM, legal ops, compliance, corporate governance, in-house counsel signals
+    # Harvey and Legora get an extra lift — in-house teams are often early AI adopters
+    # Penalise: Pure law-firm / billable-hour content irrelevant to in-house teams
+    "Corporate": [
+        (14, ["contract management", "contract lifecycle", "clm", "contract review",
+              "contract automation", "contract analytics", "clause library",
+              "contract intelligence"]),
+        (12, ["legal ops", "legal operations", "in-house counsel", "in-house legal",
+              "general counsel", "chief legal officer", "clo", "legal department",
+              "corporate legal", "law department", "outside counsel management",
+              "legal spend", "e-billing", "matter management"]),
+        (10, ["compliance", "regulatory", "corporate governance", "governance",
+              "risk management", "board management", "audit trail",
+              "data privacy", "data governance", "legal risk"]),
+        (9,  ["harvey", "harvey.ai", "legora", "ai contract", "contract ai",
+              "workflow automation", "self-service legal"]),
+        (7,  ["enterprise", "fortune 500", "corporate counsel", "procurement",
+              "vendor management", "m&a", "merger", "acquisition",
+              "due diligence", "ip management", "intellectual property"]),
+        (-5, ["billable hour", "law firm partner", "biglaw", "amlaw",
+              "solo practice", "trust accounting", "iolta", "bar exam"]),
+    ],
 }
 
 # ---------------------------------------------------------------------------
@@ -531,6 +555,27 @@ SALES_ANGLES = {
         "matter-centric filing, native email management, and legal-specific compliance "
         "workflows that a generic DMS like DocuWare simply doesn't offer."
     ),
+    "harvey": (
+        "",
+        "🔍 Harvey AI Intel",
+        "Harvey is raising the AI arms race in legal — and every firm evaluating or using "
+        "Harvey still needs a governed document layer to feed it accurate, organised work "
+        "product. This is your opening: 'Harvey is great for generation, but what documents "
+        "is it drawing from? If your DMS is unstructured, the output will be too.' Position "
+        "NetDocuments as the foundation Harvey and similar tools need to work reliably and "
+        "safely. Ask: \'Are you piloting Harvey? Have you thought about document governance "
+        "for your AI layer?\'"
+    ),
+    "legora": (
+        "",
+        "🔍 Legora Intel",
+        "Legora is positioning itself as an AI-native alternative to traditional legal "
+        "workflows. Firms evaluating Legora are actively rethinking how they manage legal "
+        "work — which means they\'re also reconsidering their document infrastructure. "
+        "Use this story to get in early: 'AI tools like Legora work best when documents are "
+        "clean, structured, and properly governed. That\'s exactly what NetDocuments "
+        "provides.' Ask: \'Is Legora on your radar? What document store would it pull from?\'"
+    ),
 
     # ── Document management & core pain ───────────────────────────────────
     "document management": (
@@ -897,7 +942,7 @@ def build_html(top_articles: list[dict], all_articles: list[dict],
     if segment == "Strategic":
         segment_badge = ""
     else:
-        badge_color = {"SML": "#7c3aed", "International": "#0369a1"}.get(segment, "#374151")
+        badge_color = {"SML": "#7c3aed", "International": "#0369a1", "Corporate": "#0f766e"}.get(segment, "#374151")
         segment_badge = (
             f'<div><span class="segment-badge" '
             f'style="background:{badge_color};color:white;">'
@@ -993,7 +1038,7 @@ def main():
     )
     parser.add_argument(
         "--segment", default="Strategic",
-        choices=["SML", "Strategic", "International"],
+        choices=["SML", "Strategic", "International", "Corporate"],
         help="Scoring segment: SML, Strategic (default), or International"
     )
     args = parser.parse_args()
