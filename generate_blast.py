@@ -276,9 +276,11 @@ def scrape_html(config: dict) -> list[dict]:
     return articles
 
 
-def fetch_all_articles(max_age_days: int = MAX_AGE_DAYS) -> tuple[list[dict], list[dict]]:
+def fetch_all_articles(max_age_days: int = MAX_AGE_DAYS,
+                       segment: str = "Strategic") -> tuple[list[dict], list[dict]]:
     """
     Scrape all regular news sources AND competitor sites.
+    When segment == "Corporate", also scrapes CORPORATE_SITES for in-house content.
 
     Returns:
         (regular_articles, competitor_articles) — two separate lists.
@@ -298,6 +300,17 @@ def fetch_all_articles(max_age_days: int = MAX_AGE_DAYS) -> tuple[list[dict], li
             regular_articles.extend(scrape_rss(site, max_age_days))
         else:
             regular_articles.extend(scrape_html(site))
+
+    # Corporate-only sources — scraped in addition to the regular feed
+    if segment == "Corporate":
+        from sites_config import CORPORATE_SITES
+        log.info("=== Scraping Corporate-specific sources (%d) ===", len(CORPORATE_SITES))
+        for site in CORPORATE_SITES:
+            log.info("Fetching %s …", site["name"])
+            if site.get("rss"):
+                regular_articles.extend(scrape_rss(site, max_age_days))
+            else:
+                regular_articles.extend(scrape_html(site))
 
     log.info("=== Scraping competitor sites (%d) ===", len(COMPETITOR_SITES))
     for site in COMPETITOR_SITES:
@@ -1039,7 +1052,7 @@ def main():
     parser.add_argument(
         "--segment", default="Strategic",
         choices=["SML", "Strategic", "International", "Corporate"],
-        help="Scoring segment: SML, Strategic (default), or International"
+        help="Scoring segment: SML, Strategic (default), International, or Corporate"
     )
     args = parser.parse_args()
 

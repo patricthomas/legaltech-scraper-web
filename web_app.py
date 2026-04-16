@@ -89,7 +89,8 @@ def _scrape_worker(segment, investigate_term, selected_news,
 
         _push_log(f"🔍 Fetching articles (last {max_age_days} days)…")
         news_articles, competitor_articles = gb.fetch_all_articles(
-            max_age_days=max_age_days
+            max_age_days=max_age_days,
+            segment=segment
         )
 
         # Scrape custom RSS feeds
@@ -111,13 +112,23 @@ def _scrape_worker(segment, investigate_term, selected_news,
 
         _push_log(f"✅ {len(news_articles)} total articles across {len(src_counts)} sources")
 
-        # Filter to selected news sources (always include custom feeds)
+        # Filter to selected news sources (always include custom feeds +
+        # Corporate-specific sources when that segment is active)
         if selected_news:
             custom_names = {s["name"] for s in custom}
+            corp_names: set[str] = set()
+            if segment == "Corporate":
+                try:
+                    sys.path.insert(0, str(Path(__file__).parent))
+                    from sites_config import CORPORATE_SITES
+                    corp_names = {s["name"] for s in CORPORATE_SITES}
+                except Exception:
+                    pass
             news_articles = [
                 a for a in news_articles
                 if a.get("source", "") in selected_news
                 or a.get("source", "") in custom_names
+                or a.get("source", "") in corp_names
             ]
             _push_log(f"   → {len(news_articles)} after source filter")
 

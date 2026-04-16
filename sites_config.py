@@ -225,5 +225,107 @@ COMPETITOR_SITES: list[dict] = [
     },
 ]
 
+# ---------------------------------------------------------------------------
+# CORPORATE SITES — extra news sources scraped ONLY when the Corporate
+# segment is selected.  These target in-house / corporate counsel publications
+# that are not relevant to law-firm-focused segments.
+#
+# Access notes:
+#   • Corporate Counsel (Law.com) — same ALM Nuxt.js CMS as Legaltech News;
+#     data-cy selectors are stable across redesigns.
+#   • Bloomberg Law (Legal Ops & Tech Insights) — publicly accessible
+#     headlines; full article text is subscription-gated.
+#   • ACC Docket — Drupal CMS; RSS at /rss.xml.
+#   • CCBJ — WordPress; RSS at /feed/.
+#   • CLOC — WordPress; RSS at /feed/. Research-heavy, lower news frequency.
+#   • aw360.com/pulse/legal-tech — unverified URL; uncomment once confirmed.
+# ---------------------------------------------------------------------------
+
+CORPORATE_SITES: list[dict] = [
+    {
+        # ALM / Law.com Corporate Counsel section.
+        # Identical Nuxt.js CMS to Legaltech News — data-cy selectors are reliable.
+        "name": "Corporate Counsel (Law.com)",
+        "url": "https://www.law.com/corpcounsel/",
+        "article_sel": 'li[data-cy="article"]',
+        "title_sel": 'a[data-cy="story-link"]',
+        "link_sel": 'a[data-cy="story-link"]',
+        "desc_sel": 'p[data-cy="story-summary"]',
+        "base_url": "https://www.law.com",
+    },
+    {
+        # ACC Docket — in-house counsel magazine from the Association of Corporate Counsel.
+        # Drupal CMS; RSS preferred for reliability.
+        "name": "ACC Docket",
+        "url": "https://docket.acc.com",
+        "rss": "https://docket.acc.com/rss.xml",
+        "article_sel": ".views-row, article",
+        "title_sel": "h3 a, h2 a",
+        "link_sel": "h3 a, h2 a",
+        "desc_sel": ".field--type-text-with-summary p, .views-field-body p",
+        "base_url": "https://docket.acc.com",
+    },
+    {
+        # CCBJ — Corporate Counsel Business Journal.
+        # GC-focused; avoids law-firm content — clean signal for in-house persona.
+        # WordPress; RSS at /feed/.
+        "name": "CCBJ",
+        "url": "https://ccbjournal.com/news",
+        "rss": "https://ccbjournal.com/feed/",
+        "article_sel": "article, div.post",
+        "title_sel": "h2 a, h3 a",
+        "link_sel": "h2 a, h3 a",
+        "desc_sel": "p",
+        "base_url": "https://ccbjournal.com",
+    },
+    {
+        # Bloomberg Law — Legal Ops & Tech section.
+        # Publicly accessible headlines; full text requires subscription.
+        # HTML scrape (no public RSS for this category).
+        "name": "Bloomberg Law (Legal Ops & Tech)",
+        "url": "https://news.bloomberglaw.com/legal-ops-and-tech",
+        "article_sel": "article, [data-testid='story'], .story-package-module__story",
+        "title_sel": "h3 a, h2 a",
+        "link_sel": "h3 a, h2 a",
+        "desc_sel": "p",
+        "base_url": "https://news.bloomberglaw.com",
+    },
+    {
+        # Bloomberg Law Pro — Technology Insights section.
+        # Research-grade analysis on legal tech; articles often publicly accessible.
+        "name": "Bloomberg Law Pro (Tech)",
+        "url": "https://pro.bloomberglaw.com/insights/technology/",
+        "article_sel": "article, [class*='card'], [class*='insight']",
+        "title_sel": "h3 a, h2 a",
+        "link_sel": "h3 a, h2 a",
+        "desc_sel": "p",
+        "base_url": "https://pro.bloomberglaw.com",
+    },
+    {
+        # CLOC — Corporate Legal Operations Consortium.
+        # Research, best-practice guides, and event recaps for legal ops professionals.
+        # WordPress; RSS at /feed/.
+        "name": "CLOC",
+        "url": "https://cloc.org",
+        "rss": "https://cloc.org/feed/",
+        "article_sel": "article, div.post",
+        "title_sel": "h2 a, h3 a",
+        "link_sel": "h2 a, h3 a",
+        "desc_sel": "p",
+        "base_url": "https://cloc.org",
+    },
+    # Uncomment once URL confirmed accessible:
+    # {
+    #     "name": "Above the Law 360 (Legal Tech)",
+    #     "url": "https://aw360.com/pulse/legal-tech",
+    #     "rss": "https://aw360.com/pulse/legal-tech/feed/",
+    #     "article_sel": "article, div.post",
+    #     "title_sel": "h2 a, h3 a",
+    #     "link_sel": "h2 a, h3 a",
+    #     "desc_sel": "p",
+    #     "base_url": "https://aw360.com",
+    # },
+]
+
 # Convenience: all sites combined (used by scraper.py and main.py)
 ALL_SITES: list[dict] = SITES + COMPETITOR_SITES
