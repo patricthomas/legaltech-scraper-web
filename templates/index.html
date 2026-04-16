@@ -40,9 +40,12 @@
     .site-label { display: flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1.5px solid #e2e8f0; border-radius: 7px; cursor: pointer; font-size: 0.84rem; transition: all 0.12s; }
     .site-label.news.checked  { border-color: #1d4ed8; background: #eff6ff; }
     .site-label.comp.checked  { border-color: #ef4444; background: #fff5f5; }
+    .site-label.corp-news.checked { border-color: #0f766e; background: #f0fdfa; }
     .site-label.news input { accent-color: #1d4ed8; }
     .site-label.comp input { accent-color: #ef4444; }
+    .site-label.corp-news input { accent-color: #0f766e; }
     .site-label input { width: 14px; height: 14px; flex-shrink: 0; }
+    .corp-only { display: none; }
     .toggle-row { display: flex; gap: 8px; padding-top: 12px; }
     .small-btn { font-size: 0.72rem; font-weight: 600; color: #94a3b8; border: none; background: none; cursor: pointer; padding: 0; text-transform: uppercase; letter-spacing: 0.4px; }
     .small-btn:hover { color: #475569; }
@@ -139,6 +142,12 @@
         {% for name in news_sites %}
         <label class="site-label news checked">
           <input type="checkbox" class="news-source" value="{{ name }}" checked onchange="toggleSiteLabel(this); updateCount('news-source','news-count')"/>
+          {{ name }}
+        </label>
+        {% endfor %}
+        {% for name in corporate_sites %}
+        <label class="site-label news corp-news corp-only">
+          <input type="checkbox" class="news-source" value="{{ name }}" onchange="toggleSiteLabel(this); updateCount('news-source','news-count')"/>
           {{ name }}
         </label>
         {% endfor %}
@@ -250,8 +259,11 @@
       if (cfg.days) document.getElementById("days-field").value = cfg.days;
       if (cfg.news_sites) {
         document.querySelectorAll("input.news-source").forEach(cb => {
-          cb.checked = cfg.news_sites.includes(cb.value);
-          toggleSiteLabel(cb);
+          // Only restore checked state for visible (non-corp-only) sources
+          if (!cb.closest('label').classList.contains('corp-only')) {
+            cb.checked = cfg.news_sites.includes(cb.value);
+            toggleSiteLabel(cb);
+          }
         });
       }
       if (cfg.competitors) {
@@ -271,7 +283,9 @@
       email: document.getElementById("email-field").value,
       investigate: document.getElementById("investigate-field").value,
       days: document.getElementById("days-field").value,
-      news_sites: [...document.querySelectorAll("input.news-source:checked")].map(c => c.value),
+      news_sites: [...document.querySelectorAll("input.news-source:checked")]
+                    .filter(c => !c.closest('label').classList.contains('corp-only'))
+                    .map(c => c.value),
       competitors: [...document.querySelectorAll("input.comp-source:checked")].map(c => c.value),
     }));
   }
@@ -284,6 +298,25 @@
     btn.classList.add(map[btn.dataset.seg]);
     currentSeg = btn.dataset.seg;
     document.getElementById("run-btn").className = cls[currentSeg];
+
+    // Show/hide Corporate-only sources and auto-check/uncheck them
+    const corpLabels = document.querySelectorAll('.corp-only');
+    if (currentSeg === 'Corporate') {
+      corpLabels.forEach(lbl => {
+        lbl.style.display = '';
+        const cb = lbl.querySelector('input');
+        cb.checked = true;
+        toggleSiteLabel(cb);
+      });
+    } else {
+      corpLabels.forEach(lbl => {
+        lbl.style.display = 'none';
+        const cb = lbl.querySelector('input');
+        cb.checked = false;
+        toggleSiteLabel(cb);
+      });
+    }
+    updateCount('news-source', 'news-count');
   }
 
   function toggleSection(head) {
@@ -301,14 +334,19 @@
 
   function setAll(cls, state) {
     document.querySelectorAll("input." + cls).forEach(cb => {
+      // Don't toggle hidden corp-only sources
+      if (cb.closest('label').style.display === 'none') return;
       cb.checked = state;
       toggleSiteLabel(cb);
     });
   }
 
   function updateCount(cls, countId) {
-    const total   = document.querySelectorAll("input." + cls).length;
-    const checked = document.querySelectorAll("input." + cls + ":checked").length;
+    // Only count inputs in visible labels
+    const inputs = [...document.querySelectorAll("input." + cls)]
+                     .filter(inp => inp.closest('label').style.display !== 'none');
+    const total   = inputs.length;
+    const checked = inputs.filter(inp => inp.checked).length;
     document.getElementById(countId).textContent = checked + " of " + total + " selected";
   }
 

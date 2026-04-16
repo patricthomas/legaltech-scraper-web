@@ -28,7 +28,7 @@ app = Flask(__name__, template_folder=str(BASE_DIR / "templates"))
 
 sys.path.insert(0, str(BASE_DIR))
 import generate_blast as gb
-from sites_config import COMPETITOR_SITES, SITES
+from sites_config import COMPETITOR_SITES, CORPORATE_SITES, SITES
 
 # ---------------------------------------------------------------------------
 # Custom sites persistence
@@ -121,12 +121,7 @@ def _scrape_worker(segment, investigate_term, selected_news,
             custom_names = {s["name"] for s in custom}
             corp_names: set[str] = set()
             if segment == "Corporate":
-                try:
-                    sys.path.insert(0, str(Path(__file__).parent))
-                    from sites_config import CORPORATE_SITES
-                    corp_names = {s["name"] for s in CORPORATE_SITES}
-                except Exception:
-                    pass
+                corp_names = {s["name"] for s in CORPORATE_SITES}
             news_articles = [
                 a for a in news_articles
                 if a.get("source", "") in selected_news
@@ -189,11 +184,19 @@ def index():
             seen.add(s["name"])
             competitors.append(s["name"])
 
+    corporate_sites = []
+    seen = set()
+    for s in CORPORATE_SITES:
+        if s["name"] not in seen:
+            seen.add(s["name"])
+            corporate_sites.append(s["name"])
+
     custom_sites = load_custom_sites()
 
     return render_template("index.html",
                            news_sites=news_sites,
                            competitors=competitors,
+                           corporate_sites=corporate_sites,
                            custom_sites=custom_sites,
                            default_email=gb.RECIPIENTS)
 
