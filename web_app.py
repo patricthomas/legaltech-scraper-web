@@ -2,8 +2,8 @@
 web_app.py  -  Flask web interface for LegalTech News Scraper
 """
 
-import datetime
 import csv
+import datetime
 import io
 import json
 import logging
@@ -31,8 +31,18 @@ import generate_blast as gb
 from sites_config import COMPETITOR_SITES, CORPORATE_SITES, SITES
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _unique_names(site_list: list[dict]) -> list[str]:
+    """Return deduplicated site names in insertion order."""
+    return list(dict.fromkeys(s["name"] for s in site_list))
+
+
+# ---------------------------------------------------------------------------
 # Custom sites persistence
 # ---------------------------------------------------------------------------
+
 def load_custom_sites() -> list[dict]:
     if CUSTOM_SITES_FILE.exists():
         try:
@@ -148,14 +158,13 @@ def _scrape_worker(segment, investigate_term, selected_news,
                              competitor_articles=competitor_articles,
                              segment=segment)
         _push_log("✅ Done! Email draft ready to download.")
-        # Score all articles for the CSV (top articles already have scores)
-        top_urls = {a["url"] for a in top}
+
+        # Score remaining articles for CSV export
         for a in news_articles:
             if "score" not in a:
                 a["score"] = gb.score_article(a, segment=segment,
                                                investigate_term=investigate_term)
-        all_scraped = news_articles + competitor_articles
-        _finish_job(html=html, articles=all_scraped)
+        _finish_job(html=html, articles=news_articles + competitor_articles)
 
     except Exception as exc:
         _push_log(f"❌ Error: {exc}")
@@ -170,33 +179,11 @@ def _scrape_worker(segment, investigate_term, selected_news,
 # ---------------------------------------------------------------------------
 @app.route("/")
 def index():
-    news_sites = []
-    seen = set()
-    for s in SITES:
-        if s["name"] not in seen:
-            seen.add(s["name"])
-            news_sites.append(s["name"])
-
-    competitors = []
-    seen = set()
-    for s in COMPETITOR_SITES:
-        if s["name"] not in seen:
-            seen.add(s["name"])
-            competitors.append(s["name"])
-
-    corporate_sites = []
-    seen = set()
-    for s in CORPORATE_SITES:
-        if s["name"] not in seen:
-            seen.add(s["name"])
-            corporate_sites.append(s["name"])
-
     custom_sites = load_custom_sites()
-
     return render_template("index.html",
-                           news_sites=news_sites,
-                           competitors=competitors,
-                           corporate_sites=corporate_sites,
+                           news_sites=_unique_names(SITES),
+                           competitors=_unique_names(COMPETITOR_SITES),
+                           corporate_sites=_unique_names(CORPORATE_SITES),
                            custom_sites=custom_sites,
                            default_email=gb.RECIPIENTS)
 

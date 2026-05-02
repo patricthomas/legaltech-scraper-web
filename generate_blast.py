@@ -20,9 +20,7 @@ Edit the constants in the CONFIG section below.
 import argparse
 import csv
 import datetime
-import json
 import logging
-import os
 import re
 import sys
 from pathlib import Path
@@ -30,6 +28,13 @@ from pathlib import Path
 import feedparser
 import requests
 from bs4 import BeautifulSoup
+
+# Make sites_config importable whether this file is run directly or
+# loaded as a module by web_app.py.
+_HERE = Path(__file__).parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+from sites_config import SITES, COMPETITOR_SITES, CORPORATE_SITES
 
 # ---------------------------------------------------------------------------
 # CONFIG — edit these before running
@@ -287,9 +292,6 @@ def fetch_all_articles(max_age_days: int = MAX_AGE_DAYS,
         Regular articles are scored and ranked; competitor articles get their
         own 'Competitor Watch' section in the blast.
     """
-    sys.path.insert(0, str(Path(__file__).parent))
-    from sites_config import SITES, COMPETITOR_SITES
-
     regular_articles: list[dict] = []
     competitor_articles: list[dict] = []
 
@@ -303,7 +305,6 @@ def fetch_all_articles(max_age_days: int = MAX_AGE_DAYS,
 
     # Corporate-only sources — scraped in addition to the regular feed
     if segment == "Corporate":
-        from sites_config import CORPORATE_SITES
         log.info("=== Scraping Corporate-specific sources (%d) ===", len(CORPORATE_SITES))
         for site in CORPORATE_SITES:
             log.info("Fetching %s …", site["name"])
@@ -576,18 +577,18 @@ SALES_ANGLES = {
         "product. This is your opening: 'Harvey is great for generation, but what documents "
         "is it drawing from? If your DMS is unstructured, the output will be too.' Position "
         "NetDocuments as the foundation Harvey and similar tools need to work reliably and "
-        "safely. Ask: \'Are you piloting Harvey? Have you thought about document governance "
-        "for your AI layer?\'"
+        "safely. Ask: 'Are you piloting Harvey? Have you thought about document governance "
+        "for your AI layer?'"
     ),
     "legora": (
         "",
         "🔍 Legora Intel",
         "Legora is positioning itself as an AI-native alternative to traditional legal "
         "workflows. Firms evaluating Legora are actively rethinking how they manage legal "
-        "work — which means they\'re also reconsidering their document infrastructure. "
+        "work — which means they're also reconsidering their document infrastructure. "
         "Use this story to get in early: 'AI tools like Legora work best when documents are "
-        "clean, structured, and properly governed. That\'s exactly what NetDocuments "
-        "provides.' Ask: \'Is Legora on your radar? What document store would it pull from?\'"
+        "clean, structured, and properly governed. That's exactly what NetDocuments "
+        "provides.' Ask: 'Is Legora on your radar? What document store would it pull from?'"
     ),
 
     # ── Document management & core pain ───────────────────────────────────
@@ -929,9 +930,6 @@ def _build_competitor_section(competitor_articles: list[dict]) -> str:
 def build_html(top_articles: list[dict], all_articles: list[dict],
                competitor_articles: list[dict] | None = None,
                segment: str = "Strategic") -> str:
-    sys.path.insert(0, str(Path(__file__).parent))
-    from sites_config import SITES
-
     now        = datetime.datetime.now()
     day        = str(now.day)   # no leading zero, cross-platform
     date_long  = now.strftime(f"%A, %B {day}, %Y")
@@ -944,7 +942,7 @@ def build_html(top_articles: list[dict], all_articles: list[dict],
 
     # Competitor articles can come from two places:
     # 1. The explicit competitor_articles argument (generate_blast.main)
-    # 2. Articles in all_articles that have competitor=True (ui.py path)
+    # 2. Articles in all_articles that have competitor=True (web_app.py path)
     comp_articles = list(competitor_articles or [])
     if not comp_articles:
         comp_articles = [a for a in all_articles if a.get("competitor")]
@@ -1022,7 +1020,7 @@ def send_via_outlook(html: str, subject: str, recipients: str = ""):
     )
 
     # Save to Desktop so it's easy to find
-    desktop = Path.home() / "Desktop"
+    desktop  = Path.home() / "Desktop"
     ts       = datetime.datetime.now().strftime("%Y%m%d")
     eml_path = desktop / f"ND_LegalTech_Blast_{ts}.eml"
     # Write as ASCII — body is base64, subject is RFC2047-encoded, all safe
@@ -1072,7 +1070,7 @@ def main():
         ts  = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         csv_path = OUTPUT_DIR / f"news_articles_{ts}.csv"
         with open(csv_path, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=["source","title","url","desc","competitor"])
+            writer = csv.DictWriter(f, fieldnames=["source", "title", "url", "desc", "competitor"])
             writer.writeheader()
             writer.writerows(all_articles)
         log.info("Saved CSV: %s", csv_path)

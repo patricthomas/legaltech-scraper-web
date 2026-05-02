@@ -433,7 +433,7 @@
     const data = await (await fetch("/get-html")).json();
     document.getElementById("progress-wrap").style.display = "none";
     const btn = document.getElementById("run-btn");
-    btn.disabled = false; btn.textContent = "\u25b6 Run Scraper";
+    btn.disabled = false; btn.textContent = "▶ Run Scraper";
     document.getElementById("preview-frame").srcdoc = data.html;
     document.getElementById("result-section").style.display = "block";
     document.getElementById("result-section").scrollIntoView({behavior:"smooth"});
@@ -442,10 +442,10 @@
   function onError() {
     document.getElementById("progress-wrap").style.display = "none";
     const btn = document.getElementById("run-btn");
-    btn.disabled = false; btn.textContent = "\u25b6 Run Scraper";
+    btn.disabled = false; btn.textContent = "▶ Run Scraper";
   }
 
-  async function downloadCsv() {
+  function downloadCsv() {
     const a = document.createElement("a");
     a.href = "/download-csv";
     a.download = "";
