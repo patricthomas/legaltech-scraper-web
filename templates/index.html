@@ -44,8 +44,11 @@
     .site-label.news input { accent-color: #1d4ed8; }
     .site-label.comp input { accent-color: #ef4444; }
     .site-label.corp-news input { accent-color: #0f766e; }
+    .site-label.intl-news.checked { border-color: #0369a1; background: #f0f9ff; }
+    .site-label.intl-news input { accent-color: #0369a1; }
     .site-label input { width: 14px; height: 14px; flex-shrink: 0; }
     .corp-only { display: none; }
+    .intl-only { display: none; }
     .toggle-row { display: flex; gap: 8px; padding-top: 12px; }
     .small-btn { font-size: 0.72rem; font-weight: 600; color: #94a3b8; border: none; background: none; cursor: pointer; padding: 0; text-transform: uppercase; letter-spacing: 0.4px; }
     .small-btn:hover { color: #475569; }
@@ -147,6 +150,12 @@
         {% endfor %}
         {% for name in corporate_sites %}
         <label class="site-label news corp-news corp-only">
+          <input type="checkbox" class="news-source" value="{{ name }}" onchange="toggleSiteLabel(this); updateCount('news-source','news-count')"/>
+          {{ name }}
+        </label>
+        {% endfor %}
+        {% for name in international_sites %}
+        <label class="site-label news intl-news intl-only">
           <input type="checkbox" class="news-source" value="{{ name }}" onchange="toggleSiteLabel(this); updateCount('news-source','news-count')"/>
           {{ name }}
         </label>
@@ -260,7 +269,7 @@
       if (cfg.news_sites) {
         document.querySelectorAll("input.news-source").forEach(cb => {
           // Only restore checked state for non-corp-only sources
-          if (!cb.closest('label').classList.contains('corp-only')) {
+          if (!cb.closest('label').classList.contains('corp-only') && !cb.closest('label').classList.contains('intl-only')) {
             cb.checked = cfg.news_sites.includes(cb.value);
             toggleSiteLabel(cb);
           }
@@ -284,7 +293,7 @@
       investigate: document.getElementById("investigate-field").value,
       days: document.getElementById("days-field").value,
       news_sites: [...document.querySelectorAll("input.news-source:checked")]
-                    .filter(c => !c.closest('label').classList.contains('corp-only'))
+                    .filter(c => !c.closest('label').classList.contains('corp-only') && !c.closest('label').classList.contains('intl-only'))
                     .map(c => c.value),
       competitors: [...document.querySelectorAll("input.comp-source:checked")].map(c => c.value),
     }));
@@ -299,23 +308,23 @@
     currentSeg = btn.dataset.seg;
     document.getElementById("run-btn").className = cls[currentSeg];
 
-    // Show/hide Corporate-only sources and auto-check/uncheck them
+    // Show/hide segment-only sources and auto-check/uncheck them
     const corpLabels = document.querySelectorAll('.corp-only');
-    if (currentSeg === 'Corporate') {
-      corpLabels.forEach(lbl => {
-        lbl.style.display = 'flex';  // override CSS class — must use flex not ''
-        const cb = lbl.querySelector('input');
-        cb.checked = true;
-        toggleSiteLabel(cb);
-      });
-    } else {
-      corpLabels.forEach(lbl => {
-        lbl.style.display = 'none';
-        const cb = lbl.querySelector('input');
-        cb.checked = false;
-        toggleSiteLabel(cb);
-      });
-    }
+    const intlLabels = document.querySelectorAll('.intl-only');
+    const showCorp = currentSeg === 'Corporate';
+    const showIntl = currentSeg === 'International';
+    corpLabels.forEach(lbl => {
+      lbl.style.display = showCorp ? 'flex' : 'none';
+      const cb = lbl.querySelector('input');
+      cb.checked = showCorp;
+      toggleSiteLabel(cb);
+    });
+    intlLabels.forEach(lbl => {
+      lbl.style.display = showIntl ? 'flex' : 'none';
+      const cb = lbl.querySelector('input');
+      cb.checked = showIntl;
+      toggleSiteLabel(cb);
+    });
     updateCount('news-source', 'news-count');
   }
 

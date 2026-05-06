@@ -327,5 +327,91 @@ CORPORATE_SITES: list[dict] = [
     # },
 ]
 
+
+# ---------------------------------------------------------------------------
+# INTERNATIONAL SITES — extra news sources scraped ONLY when the International
+# segment is selected.  These target UK and international legal publications
+# not relevant to US-focused segments.
+#
+# Access notes:
+#   • Law Society UK        — custom CMS; HTML scrape only (no public RSS).
+#   • Briefing              — WordPress; RSS preferred.
+#   • LPM Magazine          — WordPress; RSS preferred.
+#   • Legal Support Network — WordPress; RSS preferred.
+#   • IR Global             — HTML scrape; selectors may need tuning.
+#   • NetLaw Media          — HTML scrape; selectors may need tuning.
+# ---------------------------------------------------------------------------
+
+INTERNATIONAL_SITES: list[dict] = [
+    {
+        # Law Society of England and Wales — news and press releases.
+        "name": "Law Society UK",
+        "url": "https://www.lawsociety.org.uk/all-news",
+        "article_sel": "article, li.search-result-item, .news-listing__item",
+        "title_sel": "h3 a, h2 a, a.title",
+        "link_sel": "h3 a, h2 a, a.title, a",
+        "desc_sel": "p",
+        "base_url": "https://www.lawsociety.org.uk",
+    },
+    {
+        # Briefing — UK legal management magazine covering ops, finance, and tech.
+        # WordPress site; RSS preferred for reliability.
+        "name": "Briefing",
+        "url": "https://www.briefing.co.uk/",
+        "rss": "https://www.briefing.co.uk/feed/",
+        "article_sel": "article, div.post",
+        "title_sel": "h2 a, h3 a",
+        "link_sel": "h2 a, h3 a",
+        "desc_sel": "p",
+        "base_url": "https://www.briefing.co.uk",
+    },
+    {
+        # LPM Magazine — UK legal practice management publication.
+        # WordPress site; RSS preferred for reliability.
+        "name": "LPM Magazine",
+        "url": "https://www.lpmmag.co.uk/",
+        "rss": "https://www.lpmmag.co.uk/feed/",
+        "article_sel": "article, div.post",
+        "title_sel": "h2 a, h3 a",
+        "link_sel": "h2 a, h3 a",
+        "desc_sel": "p",
+        "base_url": "https://www.lpmmag.co.uk",
+    },
+    {
+        # Legal Support Network — UK-based community for legal support professionals.
+        # WordPress site; RSS preferred.
+        "name": "Legal Support Network",
+        "url": "https://www.legalsupportnetwork.co.uk/",
+        "rss": "https://www.legalsupportnetwork.co.uk/feed/",
+        "article_sel": "article, div.post",
+        "title_sel": "h2 a, h3 a",
+        "link_sel": "h2 a, h3 a",
+        "desc_sel": "p",
+        "base_url": "https://www.legalsupportnetwork.co.uk",
+    },
+    {
+        # IR Global — international network of specialist advisory firms.
+        # HTML scrape; selectors may need tuning if site redesigns.
+        "name": "IR Global",
+        "url": "https://irglobal.com/news/",
+        "article_sel": "article, .post, .news-item, li.post",
+        "title_sel": "h2 a, h3 a",
+        "link_sel": "h2 a, h3 a",
+        "desc_sel": "p",
+        "base_url": "https://irglobal.com",
+    },
+    {
+        # NetLaw Media — UK legal technology publisher and events company.
+        # HTML scrape; selectors may need tuning if site redesigns.
+        "name": "NetLaw Media",
+        "url": "https://www.netlawmedia.com/news/",
+        "article_sel": "article, .post, .news-item, li.post",
+        "title_sel": "h2 a, h3 a",
+        "link_sel": "h2 a, h3 a",
+        "desc_sel": "p",
+        "base_url": "https://www.netlawmedia.com",
+    },
+]
+
 # Convenience: all sites combined (used by scraper.py and main.py)
 ALL_SITES: list[dict] = SITES + COMPETITOR_SITES

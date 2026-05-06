@@ -34,7 +34,7 @@ from bs4 import BeautifulSoup
 _HERE = Path(__file__).parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
-from sites_config import SITES, COMPETITOR_SITES, CORPORATE_SITES
+from sites_config import SITES, COMPETITOR_SITES, CORPORATE_SITES, INTERNATIONAL_SITES
 
 # ---------------------------------------------------------------------------
 # CONFIG — edit these before running
@@ -307,6 +307,17 @@ def fetch_all_articles(max_age_days: int = MAX_AGE_DAYS,
     if segment == "Corporate":
         log.info("=== Scraping Corporate-specific sources (%d) ===", len(CORPORATE_SITES))
         for site in CORPORATE_SITES:
+            log.info("Fetching %s …", site["name"])
+            if site.get("rss"):
+                regular_articles.extend(scrape_rss(site, max_age_days))
+            else:
+                regular_articles.extend(scrape_html(site))
+
+
+    # International-only sources — scraped in addition to the regular feed
+    if segment == "International":
+        log.info("=== Scraping International-specific sources (%d) ===", len(INTERNATIONAL_SITES))
+        for site in INTERNATIONAL_SITES:
             log.info("Fetching %s …", site["name"])
             if site.get("rss"):
                 regular_articles.extend(scrape_rss(site, max_age_days))

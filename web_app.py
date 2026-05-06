@@ -28,7 +28,7 @@ app = Flask(__name__, template_folder=str(BASE_DIR / "templates"))
 
 sys.path.insert(0, str(BASE_DIR))
 import generate_blast as gb
-from sites_config import COMPETITOR_SITES, CORPORATE_SITES, SITES
+from sites_config import COMPETITOR_SITES, CORPORATE_SITES, INTERNATIONAL_SITES, SITES
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -132,11 +132,15 @@ def _scrape_worker(segment, investigate_term, selected_news,
             corp_names: set[str] = set()
             if segment == "Corporate":
                 corp_names = {s["name"] for s in CORPORATE_SITES}
+            intl_names: set[str] = set()
+            if segment == "International":
+                intl_names = {s["name"] for s in INTERNATIONAL_SITES}
             news_articles = [
                 a for a in news_articles
                 if a.get("source", "") in selected_news
                 or a.get("source", "") in custom_names
                 or a.get("source", "") in corp_names
+                or a.get("source", "") in intl_names
             ]
             _push_log(f"   → {len(news_articles)} after source filter")
 
@@ -184,6 +188,7 @@ def index():
                            news_sites=_unique_names(SITES),
                            competitors=_unique_names(COMPETITOR_SITES),
                            corporate_sites=_unique_names(CORPORATE_SITES),
+                           international_sites=_unique_names(INTERNATIONAL_SITES),
                            custom_sites=custom_sites,
                            default_email=gb.RECIPIENTS)
 
